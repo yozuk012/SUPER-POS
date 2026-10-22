@@ -1,0 +1,152 @@
+// src/app/bahan-baku/components/BahanBakuList.jsx
+'use client';
+
+import { FiPackage, FiEdit2, FiTrash2, FiAlertCircle, FiCopy } from 'react-icons/fi';
+import { formatCompactRupiah, getPurchaseDisplay } from '@/lib/rawMaterialUtils';
+
+export default function BahanBakuList({
+  bahanBaku,
+  isLoading,
+  error,
+  onEdit,
+  onDelete,
+  onOpenCopyModal
+}) {
+  // ═══ LOADING ═══
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mb-3"></div>
+        <p className="text-sm font-medium">Memuat data bahan baku...</p>
+      </div>
+    );
+  }
+
+  // ═══ ERROR ═══
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start gap-2 shadow-sm">
+        <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+          <FiAlertCircle className="w-5 h-5 text-red-600" />
+        </div>
+        <span className="font-medium pt-1.5">{error}</span>
+      </div>
+    );
+  }
+
+  // ═══ EMPTY STATE ═══
+  if (bahanBaku.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-xl shadow-sm p-10 text-center border-2 border-dashed border-blue-300">
+        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+          <FiPackage className="w-8 h-8 text-blue-400" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800 mb-1">Belum Ada Bahan Baku</h3>
+        <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+          Belum ada bahan baku di cabang ini. Anda dapat menyalin data bahan baku dari cabang lain atau menambahkan bahan baku baru melalui tombol tambah di atas.
+        </p>
+        {onOpenCopyModal && (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={onOpenCopyModal}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-sm transition-colors shadow-md shadow-blue-500/30 active:scale-95"
+            >
+              <FiCopy className="w-4 h-4" />
+              <span>Salin Bahan Baku dari Cabang Lain</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ═══ DAFTAR (Grid Cards) ═══
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {bahanBaku.map((item) => {
+        const purchaseDisplay = getPurchaseDisplay(item);
+        const stockQty = item.qty_on_hand || 0;
+        const isLowStock = stockQty > 0 && purchaseDisplay.stock <= 5;
+        const hasStock = stockQty > 0;
+
+        return (
+          <div
+            key={item.id}
+            className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-xl shadow-sm p-4 border border-blue-200 hover:shadow-lg hover:border-blue-400 transition-all flex flex-col justify-between"
+          >
+            {/* Top accent bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400" />
+
+            {/* Header Card */}
+            <div>
+              <div className="flex justify-between items-start mb-2 pt-1">
+                <h3 className="font-bold text-slate-900 text-lg truncate pr-2">
+                  {item.name}
+                </h3>
+                {item.is_perishable && (
+                  <span className="bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap">
+                    Mudah Busuk
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1 mb-3 bg-white/70 rounded-lg p-2.5 border border-blue-100">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 font-medium">Satuan:</span>
+                  <span className="font-bold text-slate-800">{purchaseDisplay.quantity} {purchaseDisplay.unit}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 font-medium">Harga Modal:</span>
+                  <span className="font-bold text-blue-700">
+                    {formatCompactRupiah(purchaseDisplay.price)} / {purchaseDisplay.quantity} {purchaseDisplay.unit}
+                  </span>
+                </div>
+                {item.shelf_life_days && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 font-medium">Masa Simpan:</span>
+                    <span className="font-bold text-slate-800">{item.shelf_life_days} hari</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Stok Gudang */}
+              <div className="mt-3 pt-3 border-t border-dashed border-blue-200 flex justify-between items-center">
+                <span className="text-sm text-slate-600 font-semibold">Stok Gudang:</span>
+                <span className={`text-sm font-bold px-2.5 py-1 rounded-md ${
+                  hasStock
+                    ? (isLowStock ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-blue-100 text-blue-700 border border-blue-200')
+                    : 'bg-slate-100 text-slate-500 border border-slate-200'
+                }`}>
+                  {hasStock ? `${purchaseDisplay.stock.toLocaleString('id-ID')} ${purchaseDisplay.unit}` : 'Belum diinput'}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-4 pt-3 border-t border-blue-100">
+              <button
+                onClick={() => onEdit(item)}
+                className="flex-1 flex items-center justify-center gap-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold py-2 rounded-lg transition-colors text-sm"
+              >
+                <FiEdit2 className="w-4 h-4" />
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm(`Yakin ingin menghapus "${item.name}"? Stok di gudang juga akan dihapus.`)) {
+                    onDelete(item.id);
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 bg-red-100 text-red-700 hover:bg-red-200 font-bold py-2 rounded-lg transition-colors text-sm"
+              >
+                <FiTrash2 className="w-4 h-4" />
+                Hapus
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
