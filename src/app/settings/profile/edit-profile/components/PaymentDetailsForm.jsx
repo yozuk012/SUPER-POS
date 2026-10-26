@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- preview gambar QRIS (blob/storage URL), tidak bisa dioptimasi next/image */
+
 import { FiImage, FiTrash2, FiCreditCard, FiUser, FiHash } from 'react-icons/fi';
 
 /**

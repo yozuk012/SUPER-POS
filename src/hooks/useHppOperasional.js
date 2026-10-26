@@ -59,6 +59,7 @@ export default function useHppOperasional() {
   // 1. Fetch Store ID saat user login & listen switch store
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset storeId saat user logout
       setStoreId(null);
       setExpenses([]);
       return;
@@ -137,6 +138,7 @@ export default function useHppOperasional() {
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toLocaleDateString('sv-SE');
       const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toLocaleDateString('sv-SE');
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-fetch pengeluaran saat storeId siap (default bulan ini)
       fetchExpenses(firstDay, lastDay);
     } else {
       setExpenses([]);

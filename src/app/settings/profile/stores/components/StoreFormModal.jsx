@@ -1,6 +1,8 @@
 // src/app/settings/profile/stores/components/StoreFormModal.jsx
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- preview logo & QRIS dinamis (blob/storage URL) */
+
 import { useEffect, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 
@@ -20,15 +22,8 @@ export default function StoreFormModal({
   setQrisFile,
   ownerInfo,
 }) {
-  const [logoPreview, setLogoPreview] = useState(null);
-  const [qrisPreview, setQrisPreview] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setLogoPreview(formData.logo_url || null);
-      setQrisPreview(formData.qris_code_url || null);
-    }
-  }, [isOpen, formData.logo_url, formData.qris_code_url]);
+  const [logoPreview, setLogoPreview] = useState(() => formData.logo_url || null);
+  const [qrisPreview, setQrisPreview] = useState(() => formData.qris_code_url || null);
 
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];

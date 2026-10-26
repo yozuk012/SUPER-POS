@@ -238,6 +238,7 @@ export function useDashboard(storeId, userId, dateRange) {
   }, [storeId, userId, dateRange]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data dashboard saat mount / dependensi berubah
     fetchDashboardData();
   }, [fetchDashboardData]);
 

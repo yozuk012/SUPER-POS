@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- preview foto produk (blob/storage URL), tidak bisa dioptimasi next/image */
+
 import { FaTimes, FaCamera, FaCheckCircle, FaBan } from "react-icons/fa";
 
 export default function ProductFormModal({

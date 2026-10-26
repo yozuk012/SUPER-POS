@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- thumbnail produk dinamis (storage URL) berukuran tetap via CSS */
+
 import { FiAward } from 'react-icons/fi';
 
 const formatIDR = (value) => {

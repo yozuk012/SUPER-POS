@@ -164,6 +164,7 @@ export default function useReport(filters = {}) {
   // Auto-fetch saat user login & listen switch store
   useEffect(() => {
     if (user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch laporan saat user login
       fetchReports();
     }
     const handleStoreChange = () => {

@@ -21,7 +21,7 @@ export default function StoresSettingsPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [editingStoreId, setEditingStoreId] = useState(null);
-  const [activeStoreId, setActiveStoreIdState] = useState(null);
+  const [activeStoreId, setActiveStoreIdState] = useState(() => getActiveStoreId());
 
   const [actionDialog, setActionDialog] = useState({
     isOpen: false,
@@ -59,11 +59,11 @@ export default function StoresSettingsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ambil daftar toko saat mount
     fetchStores();
   }, [fetchStores]);
 
   useEffect(() => {
-    setActiveStoreIdState(getActiveStoreId());
     const handleStoreChange = (event) => setActiveStoreIdState(event.detail || getActiveStoreId());
     window.addEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
     return () => window.removeEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
@@ -71,6 +71,7 @@ export default function StoresSettingsPage() {
 
   useEffect(() => {
     if (storeHook.successMsg) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh daftar toko setelah simpan add/update berhasil
       fetchStores();
       if (isFormModalOpen) {
         setTimeout(() => setIsFormModalOpen(false), 1500);

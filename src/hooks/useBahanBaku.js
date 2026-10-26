@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { convertPurchaseToBase, getUnitDefinition, validateRawMaterialName } from '@/lib/rawMaterialUtils';
@@ -31,7 +31,7 @@ export default function useBahanBaku() {
   const [error, setError] = useState(null);
 
   // 1. FETCH: Ambil semua bahan baku berdasarkan store_id
-  const fetchBahanBaku = async () => {
+  const fetchBahanBaku = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -67,13 +67,13 @@ export default function useBahanBaku() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storeId]);
 
   // Ambil store_id saat user login & listen switch store
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset storeId saat user logout
       setStoreId(null);
-      setBahanBaku([]);
       return;
     }
 
@@ -87,16 +87,12 @@ export default function useBahanBaku() {
 
       const activeStore = resolveActiveStore(stores);
       setStoreId(activeStore ? activeStore.id : null);
-      if (!activeStore) {
-        setBahanBaku([]);
-      }
     };
 
     fetchStore();
 
     const handleStoreChange = () => {
       // KETIKA SWITCH TOKO: BAHAN BAKU KOSONG
-      setBahanBaku([]);
       fetchStore();
     };
 
@@ -106,11 +102,12 @@ export default function useBahanBaku() {
 
   useEffect(() => {
     if (storeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh data bahan baku saat storeId berubah
       fetchBahanBaku();
     } else {
       setBahanBaku([]);
     }
-  }, [storeId]);
+  }, [storeId, fetchBahanBaku]);
 
   // ==========================================
   // 2. CREATE: Tambah bahan baku baru + Stok Awal

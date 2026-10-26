@@ -202,6 +202,7 @@ export default function useTransaction() {
   }, [currentPage, search, channel, categoryId, storeId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch produk kasir saat mount / filter berubah
     fetchProducts();
   }, [fetchProducts]);
 

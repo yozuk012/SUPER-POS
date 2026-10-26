@@ -1,6 +1,8 @@
 // src/app/settings/profile/stores/components/StoreCard.jsx
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- logo toko dinamis dari Supabase Storage */
+
 import { useState, useRef, useEffect } from 'react';
 
 export default function StoreCard({ store, isActiveStore, onSwitchStore, onEdit, onToggleStatus, onBackup, onArchive }) {

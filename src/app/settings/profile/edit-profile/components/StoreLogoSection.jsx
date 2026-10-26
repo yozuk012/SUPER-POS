@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- logo toko dinamis (blob/storage URL), tidak dioptimasi next/image */
+
 import { FiUser, FiCamera } from 'react-icons/fi';
 
 /**

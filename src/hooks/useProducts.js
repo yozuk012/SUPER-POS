@@ -160,7 +160,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
   const fetchCategories = useCallback(async () => {
     if (!user?.id || stores.length === 0) {
@@ -181,7 +181,7 @@ export function useProducts() {
     }
 
     setCategories(data || []);
-  }, [user?.id, stores]);
+  }, [user, stores]);
 
   const fetchProducts = useCallback(async () => {
     if (!user?.id || stores.length === 0) {
@@ -272,14 +272,16 @@ export function useProducts() {
       setTotalItems(count || 0);
     }
     setLoading(false);
-  }, [user?.id, stores, currentPage, searchQuery, filterCategory, filterChannel, filterStatus]);
+  }, [user, stores, currentPage, searchQuery, filterCategory, filterChannel, filterStatus]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset ke halaman 1 setiap filter berubah
     setCurrentPage(1);
   }, [searchQuery, filterCategory, filterChannel, filterStatus]);
 
   useEffect(() => { 
     if (user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch toko aktif saat mount / user berganti
       fetchStores();
     } else {
       setStores([]);
@@ -300,10 +302,11 @@ export function useProducts() {
     };
     window.addEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
     return () => window.removeEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
-  }, [user?.id, fetchStores]);
+  }, [user, fetchStores]);
 
   useEffect(() => { 
     if (stores.length > 0) { 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch kategori & produk saat daftar toko siap
       fetchCategories(); 
       fetchProducts(); 
     } else {

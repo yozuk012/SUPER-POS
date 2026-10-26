@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- gambar QRIS dari Supabase Storage */
+
 import { useState, useEffect } from 'react';
 import {
   FiAlertCircle,
@@ -37,6 +39,7 @@ export default function TransactionPaymentModal({
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset state form setiap modal dibuka
       setPaymentMethod('cash');
       setCashReceived(0);
       setReferenceNumber('');

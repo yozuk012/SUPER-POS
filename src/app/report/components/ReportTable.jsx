@@ -40,10 +40,6 @@ export default function ReportTable({ reports = [], loading, error }) {
   const totalPages = Math.max(1, Math.ceil(reports.length / itemsPerPage));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [reports]);
-
   const startIndex = (safePage - 1) * itemsPerPage;
   const currentReports = reports.slice(startIndex, startIndex + itemsPerPage);
 

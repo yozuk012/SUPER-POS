@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import PageLayout from '@/components/PageLayout';
 
 // 1. Import Hook (HANYA Bahan Baku, Operasional sudah dipisah)
@@ -13,8 +13,9 @@ import Step1BahanBaku from './components/Step1BahanBaku';
 import Step2Hasil from './components/Step2Hasil';
 import { getRecommendedPrice } from '@/lib/productUtils';
 
-export default function HitungHPPPage() {
+function HitungHPPContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Hook: Khusus Bahan Baku & Resep
   const { 
@@ -29,7 +30,7 @@ export default function HitungHPPPage() {
   // --- STATE GLOBAL ---
   const [currentStep, setCurrentStep] = useState(1);
   
-  const [namaProduk, setNamaProduk] = useState('');
+  const [namaProduk, setNamaProduk] = useState(searchParams.get('namaProduk') || '');
   const [categoryId, setCategoryId] = useState('');
   const [jumlahProduk, setJumlahProduk] = useState('');
   const [satuanProduk, setSatuanProduk] = useState('pack');
@@ -44,7 +45,7 @@ export default function HitungHPPPage() {
 
   const [bahanBakuList, setBahanBakuList] = useState([
     { 
-      id: Date.now(), 
+      id: 1, 
       raw_material_id: '', 
       namaBahan: '', 
       satuanBeli: '', 
@@ -54,14 +55,6 @@ export default function HitungHPPPage() {
       hargaBeli: '0' 
     }
   ]);
-
-  // Ambil nama produk dari URL params (jika ada)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('namaProduk')) {
-      setNamaProduk(params.get('namaProduk'));
-    }
-  }, []);
 
   // --- PERHITUNGAN OTOMATIS (Derived State) ---
   const totalPembelianBahan = bahanBakuList.reduce((sum, item) => sum + (parseFloat(item.hargaBeli) || 0), 0);
@@ -193,5 +186,21 @@ export default function HitungHPPPage() {
         )}
       </div>
     </PageLayout>
+  );
+}
+export default function HitungHPPPage() {
+  // useSearchParams() (untuk ?namaProduk=...) butuh Suspense boundary karena
+  // halaman ini di-prerender statis. Fallback memakai layar loading agar
+  // transisi ke konten tetap mulus.
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-b from-blue-600 via-blue-500 to-gray-300 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        </div>
+      }
+    >
+      <HitungHPPContent />
+    </Suspense>
   );
 }

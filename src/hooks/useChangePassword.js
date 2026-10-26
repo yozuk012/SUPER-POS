@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export function useChangePassword() {
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   // ==========================================
   // 1. STATE MANAGEMENT
@@ -178,7 +180,7 @@ export function useChangePassword() {
         } catch (err) {
           console.warn('Logout warning:', err.message);
           // Fallback: paksa redirect jika logout gagal
-          window.location.href = '/auth/login';
+          router.replace('/auth/login');
         }
       }, 2500);
 
@@ -206,7 +208,7 @@ export function useChangePassword() {
     if (confirm) {
       // Bisa gunakan router.push('/auth/forgot-password') di komponen
       // Atau redirect langsung
-      window.location.href = '/auth/forgot-password';
+      router.push('/auth/forgot-password');
     }
   };
 

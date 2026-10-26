@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
@@ -14,7 +14,7 @@ export default function useHppProduk() {
   const [error, setError] = useState(null);
 
   // 1. FETCH: Ambil daftar produk jadi beserta kategori dan info HPP
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -65,10 +65,11 @@ export default function useHppProduk() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storeId]);
 
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset storeId saat user logout
       setStoreId(null);
       setProducts([]);
       return;
@@ -103,12 +104,13 @@ export default function useHppProduk() {
 
   useEffect(() => {
     if (storeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh data produk jadi saat storeId berubah
       fetchProducts();
     } else {
       setProducts([]);
       setIsLoading(false);
     }
-  }, [storeId]);
+  }, [storeId, fetchProducts]);
 
   // 2. DELETE: Hapus produk dari database
   /**

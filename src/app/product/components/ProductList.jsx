@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- thumbnail produk dinamis (storage URL) berukuran tetap via CSS */
+
 import { FaBoxOpen, FaEdit, FaTrash, FaPowerOff, FaGlobe, FaExclamation } from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
 

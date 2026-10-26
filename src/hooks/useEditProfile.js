@@ -145,13 +145,14 @@ export function useEditProfile() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data profil saat user terautentikasi
       fetchProfileData();
     }
-  }, [user?.id, fetchProfileData]);
+  }, [user, fetchProfileData]);
 
   // ==========================================
   // 3. HELPER: HAPUS GAMBAR DARI STORAGE

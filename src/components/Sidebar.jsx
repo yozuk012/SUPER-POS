@@ -72,11 +72,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   const [isHppOpen, setIsHppOpen] = useState(isHppRouteActive);
 
-  // Auto-buka dropdown saat user berada di route HPP
-  useEffect(() => {
-    if (isHppRouteActive) setIsHppOpen(true);
-  }, [isHppRouteActive]);
-
   const handleLogout = async () => {
     await logout();
   };

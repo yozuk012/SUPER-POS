@@ -1,8 +1,32 @@
 // src/app/auth/register/page.js
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- semua <img> di file ini adalah preview dinamis (blob/storage URL), tidak bisa dioptimasi next/image */
+
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
+
+// Brand component - extracted outside to prevent recreation on render
+const Brand = () => (
+  <div className="flex items-center gap-2">
+    <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    </div>
+    <span className="font-bold text-slate-900 tracking-tight">SuperPOS</span>
+  </div>
+);
+
+// Error icon component - extracted outside to prevent recreation on render
+const ErrorIcon = () => (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
 
 export default function RegisterPage() {
   const { registerForm } = useAuth();
@@ -40,26 +64,6 @@ export default function RegisterPage() {
   const pinInputClass =
     `${inputBase} border-slate-300 text-center text-xl tracking-[0.5em] ` +
     'font-mono focus:border-blue-500 focus:ring-blue-100';
-
-  // ── Brand mark (dipakai di header) ───────────────────────────
-  const Brand = () => (
-    <div className="flex items-center gap-2">
-      <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      </div>
-      <span className="font-bold text-slate-900 tracking-tight">SuperPOS</span>
-    </div>
-  );
-
-  const ErrorIcon = () => (
-    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
 
   // ============================================================
   // STEP 1: FORM DATA AKUN

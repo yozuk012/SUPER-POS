@@ -106,10 +106,11 @@ export default function useHistory() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch riwayat transaksi saat user login / toko berganti
       fetchHistory();
     }
     const handleStoreChange = () => {
@@ -119,7 +120,7 @@ export default function useHistory() {
     };
     window.addEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
     return () => window.removeEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
-  }, [user?.id, fetchHistory]);
+  }, [user, fetchHistory]);
 
   // 1. Filter berdasarkan channel
   const filteredData = useMemo(() => {

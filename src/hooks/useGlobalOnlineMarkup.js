@@ -82,6 +82,7 @@ export function useGlobalOnlineMarkup() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch produk saat mount
     fetchProducts();
   }, [fetchProducts]);
 
@@ -104,14 +105,14 @@ export function useGlobalOnlineMarkup() {
   // ==========================================
   // 4. VALIDASI
   // ==========================================
-  const validatePercentage = () => {
+  const validatePercentage = useCallback(() => {
     const pct = parseFloat(newPercentage);
     if (!newPercentage || newPercentage.trim() === '') return 'Persentase wajib diisi';
     if (isNaN(pct)) return 'Persentase harus berupa angka';
     if (pct < 0) return 'Persentase tidak boleh negatif';
     if (pct > 500) return 'Persentase terlalu besar (maksimal 500%)';
     return null;
-  };
+  }, [newPercentage]);
 
   // ==========================================
   // 5. GENERATE PREVIEW
@@ -152,7 +153,7 @@ export function useGlobalOnlineMarkup() {
     preview.sort((a, b) => Math.abs(b.price_difference) - Math.abs(a.price_difference));
     setPreviewData(preview);
     setShowPreview(true);
-  }, [newPercentage, products]);
+  }, [newPercentage, products, validatePercentage]);
 
   // ==========================================
   // 6. APPLY GLOBAL MARKUP (FIXED VERSION)
@@ -270,7 +271,7 @@ export function useGlobalOnlineMarkup() {
       setIsSubmitting(false);
       setProgress(0);
     }
-  }, [newPercentage, products, fetchProducts]);
+  }, [newPercentage, products, fetchProducts, validatePercentage]);
 
   // ==========================================
   // 7. RESET & STATS

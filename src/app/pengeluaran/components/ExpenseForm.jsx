@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FiSave, FiCalendar, FiTag, FiDollarSign, FiFileText, FiX, FiAlertCircle } from 'react-icons/fi';
 import { MAX_TEXT_LENGTH, validateSafeText } from '@/lib/inputValidation';
 
 const THOUSAND_SEPARATOR = '.';
 
 export default function ExpenseForm({ onSubmit, isSubmitting, editingItem, onCancel }) {
-  const today = new Date().toLocaleDateString('sv-SE');
+  const today = useMemo(() => new Date().toLocaleDateString('sv-SE'), []);
 
-  const [formData, setFormData] = useState({
-    date: today,
-    category: '',
-    amount: '',
-    description: ''
-  });
+  const getInitialFormData = useCallback(() => ({
+    date: editingItem?.expense_date || today,
+    category: editingItem?.category || '',
+    amount: String(editingItem?.amount || ''),
+    description: editingItem?.description || ''
+  }), [editingItem, today]);
+
+  const [formData, setFormData] = useState(() => getInitialFormData());
 
   const descriptionError = useMemo(() => {
     if (!formData.description) return '';
@@ -36,24 +38,6 @@ export default function ExpenseForm({ onSubmit, isSubmitting, editingItem, onCan
     'Transportasi / Bensin',
     'Lainnya'
   ];
-
-  useEffect(() => {
-    if (editingItem) {
-      setFormData({
-        date: editingItem.expense_date || today,
-        category: editingItem.category || '',
-        amount: String(editingItem.amount || ''),
-        description: editingItem.description || ''
-      });
-    } else {
-      setFormData({
-        date: today,
-        category: '',
-        amount: '',
-        description: ''
-      });
-    }
-  }, [editingItem]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

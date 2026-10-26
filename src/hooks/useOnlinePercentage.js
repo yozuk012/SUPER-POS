@@ -52,13 +52,14 @@ export function useOnlinePercentage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch persentase markup saat user login
       fetchCurrentPercentage();
     }
-  }, [user?.id, fetchCurrentPercentage]);
+  }, [user, fetchCurrentPercentage]);
 
   // ==========================================
   // 3. FORM HANDLERS

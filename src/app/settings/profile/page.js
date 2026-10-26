@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- logo toko dinamis dari Supabase Storage */
+
 import { useState, useEffect } from 'react';
 import { FiLoader } from 'react-icons/fi';
 import {

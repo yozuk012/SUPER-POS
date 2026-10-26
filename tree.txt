@@ -1,4 +1,4 @@
-my-pos
+super-pos
 ├── public
 │   ├── icons
 │   │   ├── apple-touch-icon.png
@@ -9,7 +9,6 @@ my-pos
 │   ├── favicon.ico
 │   ├── logo-SP.png
 │   └── sw.js
-├── scripts
 ├── src
 │   ├── app
 │   │   ├── api
@@ -144,6 +143,7 @@ my-pos
 │   │   ├── robots.js
 │   │   └── sitemap.js
 │   ├── blueprint
+│   │   ├── AUDIT.md
 │   │   ├── DATABASE.MD
 │   │   ├── PANDUAN.txt
 │   │   ├── RELATION.md
@@ -193,6 +193,8 @@ my-pos
 │   │   ├── seedCatalog.js
 │   │   ├── site.js
 │   │   └── supabase.js
+│   ├── scripts
+│   │   └── audit.js
 │   ├── seeds
 │   │   ├── images
 │   │   │   ├── air_mineral.jpg
@@ -317,6 +319,7 @@ my-pos
 ├── .env.local
 ├── .env.production
 ├── .gitignore
+├── audit-script.js
 ├── eslint.config.mjs
 ├── jsconfig.json
 ├── next.config.mjs

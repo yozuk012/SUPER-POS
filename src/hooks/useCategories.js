@@ -45,7 +45,7 @@ export function useCategories() {
       setStores([]);
       setCategories([]);
     }
-  }, [user?.id]);
+  }, [user]);
 
   const fetchCategories = useCallback(async () => {
     if (!user?.id || stores.length === 0) {
@@ -66,9 +66,10 @@ export function useCategories() {
     if (!error) setCategories(data || []);
     else setCategories([]);
     setLoading(false);
-  }, [user?.id, stores]);
+  }, [user, stores]);
 
   useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch daftar toko saat mount (pola data fetching standar)
     if (user?.id) fetchStores(); 
     const handleStoreChange = () => {
       // Ketika switch toko: kategori kosong
@@ -77,10 +78,11 @@ export function useCategories() {
     };
     window.addEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
     return () => window.removeEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
-  }, [user?.id, fetchStores]);
+  }, [user, fetchStores]);
 
   useEffect(() => { 
     if (stores.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch kategori saat daftar toko siap
       fetchCategories(); 
     } else {
       setCategories([]);
