@@ -59,3 +59,36 @@ export const clampQuickDiscount = (amount, normalPrice) => {
   const value = Math.round(Number(amount) || 0);
   return Math.min(Math.max(value, 0), normal);
 };
+
+/**
+ * "Stok tanpa batas" = kolom `products.track_stock` bernilai false.
+ *
+ * Dipakai untuk menonaktifkan pelacakan stok sebuah produk:
+ *   - kasir tidak dibatasi stok (produk tetap bisa dijual walau stok 0),
+ *   - stok tidak dikurangi otomatis setelah transaksi berhasil.
+ *
+ * Produk lama yang belum punya kolom `track_stock` dianggap tetap dilacak
+ * (true), sehingga perilaku lamanya tidak berubah.
+ */
+export const isStockUnlimited = (product) => product?.track_stock === false;
+
+/**
+ * Deteksi error Postgres/PostgREST karena kolom belum ada di database —
+ * misalnya saat migrasi `products.track_stock` belum dijalankan.
+ *
+ * Dipakai sebagai jalur cadangan supaya aplikasi tetap berfungsi (menyimpan
+ * produk tanpa kolom tersebut) sambil memberi tahu pengguna untuk menjalankan
+ * SQL migrasi.
+ */
+export const isMissingColumnError = (error, column) => {
+  if (!error || !column) return false;
+
+  const code = String(error.code || '');
+  // 42703 = undefined_column (Postgres), PGRST204 = kolom tidak dikenal PostgREST.
+  if (code === '42703' || code === 'PGRST204') return true;
+
+  const message = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+  if (!message.includes(String(column).toLowerCase())) return false;
+
+  return message.includes('does not exist') || message.includes('schema cache');
+};

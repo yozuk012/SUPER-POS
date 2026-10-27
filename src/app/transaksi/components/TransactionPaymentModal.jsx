@@ -14,10 +14,20 @@ import {
   FiImage,
   FiInfo,
   FiLoader,
+  FiShare2,
   FiSmartphone,
   FiX
 } from 'react-icons/fi';
+import { FaTelegramPlane, FaWhatsapp } from 'react-icons/fa';
 import { parseNumberUI } from '@/lib/productUtils';
+import {
+  buildQrisFileName,
+  buildQrisShareText,
+  buildTelegramShareUrl,
+  buildWhatsAppShareUrl,
+  copyTextToClipboard,
+  shareQris,
+} from '@/lib/qrisShare';
 
 export default function TransactionPaymentModal({
   isOpen,
@@ -36,6 +46,10 @@ export default function TransactionPaymentModal({
   const [qrisConfirmed, setQrisConfirmed] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  // State fitur bagikan QRIS (WhatsApp / media sosial / salin rincian)
+  const [shareFeedback, setShareFeedback] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +61,9 @@ export default function TransactionPaymentModal({
       setQrisConfirmed(false);
       setImageError(false);
       setCopySuccess(false);
+      setShareFeedback(null);
+      setIsSharing(false);
+      setShareCopied(false);
     }
   }, [isOpen]);
 
@@ -77,6 +94,57 @@ export default function TransactionPaymentModal({
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
+  };
+
+  // ── Bagikan QRIS + nominal tagihan (WhatsApp / media sosial) ────────────
+  const getQrisShareText = () =>
+    buildQrisShareText({
+      storeName: storeInfo?.name,
+      amount: grandTotal,
+      customerName,
+      referenceNumber,
+      qrisUrl: storeQrisUrl,
+      channel,
+    });
+
+  const showShareFeedback = (message) => {
+    setShareFeedback(message);
+    setTimeout(() => setShareFeedback(null), 5000);
+  };
+
+  const handleShareQris = async () => {
+    setIsSharing(true);
+    try {
+      const result = await shareQris({
+        url: storeQrisUrl,
+        fileName: buildQrisFileName(storeInfo?.name),
+        title: `Pembayaran QRIS ${formatRupiah(grandTotal)}`,
+        text: getQrisShareText(),
+      });
+
+      if (result.status === 'fallback') {
+        const langkah = [];
+        if (result.downloaded) langkah.push('gambar QRIS sudah diunduh');
+        if (result.copied) langkah.push('rincian tagihan sudah disalin');
+
+        showShareFeedback(
+          langkah.length > 0
+            ? `Browser ini belum punya menu bagikan langsung — ${langkah.join(' dan ')}, tinggal tempel di WhatsApp/media sosial.`
+            : 'Browser ini belum mendukung bagikan langsung. Gunakan tombol WhatsApp atau Salin Rincian Tagihan.'
+        );
+      } else if (result.status === 'failed') {
+        showShareFeedback('Gagal membagikan QRIS. Coba tombol WhatsApp atau Salin Rincian.');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyQrisDetails = async () => {
+    const copied = await copyTextToClipboard(getQrisShareText());
+    setShareCopied(copied);
+    if (!copied) showShareFeedback('Gagal menyalin rincian tagihan.');
+    setTimeout(() => setShareCopied(false), 2000);
   };
 
   const handleSubmit = async () => {
@@ -248,6 +316,77 @@ export default function TransactionPaymentModal({
                 <p className="text-xs text-purple-600 mt-4 font-semibold">
                   Pastikan nominal di aplikasi e-wallet pelanggan sesuai.
                 </p>
+              </div>
+
+              {/* Bagikan QRIS + nominal tagihan ke WhatsApp / media sosial */}
+              <div className="space-y-2 rounded-xl border-2 border-dashed border-purple-300 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-xs font-bold text-purple-800">
+                    <FiShare2 aria-hidden="true" className="h-4 w-4" />
+                    Bagikan QRIS & nominal tagihan
+                  </p>
+                  <span className="whitespace-nowrap rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">
+                    {formatRupiah(grandTotal)}
+                  </span>
+                </div>
+
+                <p className="text-[11px] leading-snug text-slate-500">
+                  Kirim gambar QRIS beserta harga yang harus dibayar ke pelanggan
+                  lewat WhatsApp atau media sosial lain.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleShareQris}
+                  disabled={isSharing}
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSharing ? (
+                    <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FiShare2 aria-hidden="true" className="h-4 w-4" />
+                  )}
+                  {isSharing ? 'Menyiapkan...' : 'Bagikan QRIS'}
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={buildWhatsAppShareUrl(getQrisShareText())}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-green-500 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-green-600"
+                  >
+                    <FaWhatsapp aria-hidden="true" className="h-4 w-4" />
+                    WhatsApp
+                  </a>
+                  <a
+                    href={buildTelegramShareUrl({ text: getQrisShareText(), url: storeQrisUrl || '' })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-sky-600"
+                  >
+                    <FaTelegramPlane aria-hidden="true" className="h-4 w-4" />
+                    Telegram
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyQrisDetails}
+                    className="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2.5 text-xs font-bold text-purple-700 transition-colors hover:bg-purple-50"
+                  >
+                    {shareCopied ? (
+                      <FiCheck aria-hidden="true" className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <FiClipboard aria-hidden="true" className="h-4 w-4" />
+                    )}
+                    {shareCopied ? 'Rincian Tersalin' : 'Salin Rincian Tagihan'}
+                  </button>
+                </div>
+
+                {shareFeedback && (
+                  <p className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-blue-700">
+                    {shareFeedback}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -5,7 +5,7 @@ import { supabase, uploadFile } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useConvert } from './useConvertImages';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
-import { getOnlinePrice } from '@/lib/productUtils';
+import { getOnlinePrice, isMissingColumnError, isStockUnlimited } from '@/lib/productUtils';
 
 const UNSAFE_PRODUCT_NAME_PATTERNS = [
   /<\/?[a-z][^>]*>/i,
@@ -46,6 +46,8 @@ export function useProducts() {
     unit: 'pack',
     discount_pct: '0',
     stock: '0',
+    // true = stok dilacak (default). false = stok tanpa batas/unlimited.
+    track_stock: true,
     is_active: true,
     is_online: false,
     online_markup_pct: '0',
@@ -59,6 +61,13 @@ export function useProducts() {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Apakah kolom `products.track_stock` sudah ada di database. Fitur
+  // "stok tanpa batas" otomatis dimatikan (tanpa error) bila belum ada.
+  const [supportsStockTracking, setSupportsStockTracking] = useState(true);
+
+  const MISSING_STOCK_COLUMN_MESSAGE =
+    'Fitur "Stok Tanpa Batas" belum tersedia karena kolom `track_stock` belum ada di tabel products.\n\n' +
+    'Jalankan SQL migrasi pada src/blueprint/DATABASE.MD, lalu simpan ulang produk.';
 
   // ==========================================
   // 2. HELPER: FORMAT & PARSE ANGKA
@@ -262,6 +271,8 @@ export function useProducts() {
           ...p,
           category_name: p.categories?.name || 'Tanpa Kategori',
           stock: Array.isArray(p.inventory) ? (p.inventory[0]?.qty_on_hand || 0) : (p.inventory?.qty_on_hand || 0),
+          // Stok tanpa batas bila kolom track_stock = false (default: dilacak).
+          track_stock: p.track_stock !== false,
           has_online_price: !!onlinePriceData,
           online_price: onlinePriceData ? onlinePriceData.price : 0,
           online_markup_pct: p.online_markup_pct || 0,
@@ -270,6 +281,15 @@ export function useProducts() {
       });
       setProducts(mappedProducts);
       setTotalItems(count || 0);
+
+      // Query memakai `select('*')`, jadi keberadaan kolom `track_stock` bisa
+      // dideteksi dari baris hasil. Bila kolomnya belum ada di database,
+      // fitur "stok tanpa batas" otomatis dinonaktifkan.
+      if ((data || []).length > 0) {
+        setSupportsStockTracking(
+          (data || []).some((row) => Object.prototype.hasOwnProperty.call(row, 'track_stock'))
+        );
+      }
     }
     setLoading(false);
   }, [user, stores, currentPage, searchQuery, filterCategory, filterChannel, filterStatus]);
@@ -400,6 +420,7 @@ export function useProducts() {
       is_online: product.has_online_price,
       online_markup_pct: String(product.online_markup_pct || 0),
       stock: String(product.stock || 0),
+      track_stock: product.track_stock !== false,
       is_active: product.is_active !== false,
       image_file: null,
       image_preview: product.image_url || null,
@@ -431,12 +452,15 @@ export function useProducts() {
       return setError('Nama produk tidak boleh berisi script, tag HTML, atau perintah SQL.');
     }
 
-    const stockVal = parseNumber(formData.stock);
+    // Stok tanpa batas (unlimited): stok tidak dilacak, jadi tidak wajib diisi
+    // dan baris inventory-nya disimpan 0.
+    const stockTracked = formData.track_stock !== false;
+    const stockVal = stockTracked ? parseNumber(formData.stock) : 0;
     const basePrice = parseDecimal(formData.base_price);
     const discountPct = parseDecimal(formData.discount_pct);
     const onlineMarkupPct = parseDecimal(formData.online_markup_pct);
 
-    if (stockVal < 0) return setError('Stok tidak boleh minus.');
+    if (stockTracked && stockVal < 0) return setError('Stok tidak boleh minus.');
     if (onlineMarkupPct < 0 || onlineMarkupPct > 100) {
       return setError('Persentase harga online harus antara 0 dan 100.');
     }
@@ -476,17 +500,44 @@ export function useProducts() {
         is_active: formData.is_active !== false,
         online_markup_pct: formData.is_online ? onlineMarkupPct : 0,
         discount_pct: discountPct,
+        // Stok tanpa batas (unlimited) bila checkbox di form produk diaktifkan.
+        track_stock: stockTracked,
       };
 
-      let productId = editingId;
+      // Pisahkan kolom `track_stock` agar bisa dikirim ulang tanpa kolom itu
+      // bila database belum menjalankan migrasi (jalur cadangan).
+      const { track_stock: requestedStockTracking, ...productPayloadBase } = productPayload;
+      const buildProductPayload = (includeTrackStock) =>
+        includeTrackStock
+          ? { ...productPayloadBase, track_stock: requestedStockTracking }
+          : productPayloadBase;
 
-      if (editingId) {
-        const { error } = await supabase.from('products').update(productPayload).eq('id', editingId);
-        if (error) throw new Error('Gagal update produk: ' + error.message);
-      } else {
-        const { data, error } = await supabase.from('products').insert(productPayload).select().single();
-        if (error) throw new Error('Gagal insert produk: ' + error.message);
-        productId = data.id;
+      const saveProduct = (payload) =>
+        editingId
+          ? supabase.from('products').update(payload).eq('id', editingId)
+          : supabase.from('products').insert(payload).select().single();
+
+      let saveResult = await saveProduct(buildProductPayload(supportsStockTracking));
+
+      if (
+        saveResult.error &&
+        supportsStockTracking &&
+        isMissingColumnError(saveResult.error, 'track_stock')
+      ) {
+        // Kolom `track_stock` belum ada -> simpan tanpa kolom tersebut dan
+        // beri tahu pengguna untuk menjalankan SQL migrasi.
+        setSupportsStockTracking(false);
+        saveResult = await saveProduct(buildProductPayload(false));
+        if (!saveResult.error) alert(MISSING_STOCK_COLUMN_MESSAGE);
+      }
+
+      if (saveResult.error) {
+        throw new Error(`Gagal ${editingId ? 'update' : 'insert'} produk: ${saveResult.error.message}`);
+      }
+
+      let productId = editingId;
+      if (!editingId) {
+        productId = saveResult.data?.id;
       }
 
       const { data: existingOnlinePrice } = await supabase
@@ -559,6 +610,32 @@ export function useProducts() {
     }
   };
 
+  // Aktif/nonaktifkan pelacakan stok sebuah produk (stok tanpa batas / unlimited).
+  const toggleStockTracking = async (product) => {
+    const enableTracking = isStockUnlimited(product); // false = unlimited -> aktifkan lagi
+    const konfirmasi = enableTracking
+      ? `Aktifkan kembali pelacakan stok untuk "${product.name}"?\n\nStok produk akan divalidasi & dikurangi otomatis saat transaksi.`
+      : `Nonaktifkan stok produk "${product.name}" menjadi TANPA BATAS (unlimited)?\n\nProduk tetap bisa dijual walau stok 0 dan stok tidak dikurangi otomatis saat transaksi.`;
+
+    if (!window.confirm(konfirmasi)) return;
+
+    const { error } = await supabase
+      .from('products')
+      .update({ track_stock: enableTracking })
+      .eq('id', product.id);
+
+    if (error) {
+      alert(
+        isMissingColumnError(error, 'track_stock')
+          ? MISSING_STOCK_COLUMN_MESSAGE
+          : `Gagal: ${error.message}`
+      );
+      return;
+    }
+
+    fetchProducts();
+  };
+
   const deleteProduct = async (id) => {
     if (!window.confirm('Yakin ingin menghapus produk ini secara permanen?')) return;
 
@@ -590,6 +667,7 @@ export function useProducts() {
     totalItems, itemsPerPage,
     resetFilters,
     handleChange, handleFileChange, handleSubmit, deleteProduct, toggleProductStatus,
+    toggleStockTracking, supportsStockTracking,
     openAddModal, openEditModal, closeModal,
     refetch: fetchProducts,
     fetchCategories,

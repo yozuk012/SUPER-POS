@@ -126,10 +126,10 @@ super-pos
 │   │   │   ├── components
 │   │   │   │   ├── ReceiptModal.jsx
 │   │   │   │   ├── TransactionFilters.jsx
-│   │   │   │   ├── TransactionItemDiscount.jsx
 │   │   │   │   ├── TransactionOrderSummary.jsx
 │   │   │   │   ├── TransactionPaymentModal.jsx
-│   │   │   │   └── TransactionProductGrid.jsx
+│   │   │   │   ├── TransactionProductGrid.jsx
+│   │   │   │   └── TransactionQuickDiscount.jsx
 │   │   │   └── page.js
 │   │   ├── welcome
 │   │   │   ├── layout.js
@@ -187,6 +187,7 @@ super-pos
 │   │   ├── inputValidation.js
 │   │   ├── onboarding.js
 │   │   ├── productUtils.js
+│   │   ├── qrisShare.js
 │   │   ├── rawMaterialUtils.js
 │   │   ├── receiptLayout.js
 │   │   ├── receiptOutput.js

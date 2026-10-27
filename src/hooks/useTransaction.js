@@ -2,7 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, isMainStore, resolveActiveStore } from '@/lib/activeStore';
-import { clampQuickDiscount } from '@/lib/productUtils';
+import { isMissingColumnError, isStockUnlimited } from '@/lib/productUtils';
+
+// Kolom yang diambil untuk katalog kasir. `track_stock` (stok tanpa batas)
+// hanya ikut diminta bila kolomnya sudah ada di database, supaya fitur lama
+// tetap berjalan meski migrasi belum dijalankan.
+const buildProductSelect = (withTrackStock) =>
+  [
+    'id, name, sku, unit, base_price, hpp, image_url, is_active, store_id, category_id, discount_pct',
+    withTrackStock ? 'track_stock' : null,
+    'categories (name)',
+    'product_prices (channel, price, platform_fee_pct)',
+    'inventory (qty_on_hand)',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
 export default function useTransaction() {
   const { user } = useAuth();
@@ -10,6 +24,8 @@ export default function useTransaction() {
   const [storeName, setStoreName] = useState('');
   // Diskon Cepat (nominal Rp) hanya boleh dipakai di cabang utama.
   const [isMainBranch, setIsMainBranch] = useState(false);
+  // Apakah kolom `products.track_stock` sudah ada di database.
+  const [supportsStockTracking, setSupportsStockTracking] = useState(true);
   // ==========================================
   // 1. STATE MANAGEMENT
   // ==========================================
@@ -147,27 +163,34 @@ export default function useTransaction() {
 
     setIsLoadingProducts(true);
     try {
-      let query = supabase
-        .from('products')
-        .select(`
-          id, name, sku, unit, base_price, hpp, image_url, is_active, store_id, category_id, discount_pct,
-          categories (name),
-          product_prices (channel, price, platform_fee_pct),
-          inventory (qty_on_hand) 
-        `, { count: 'exact' })
-        .eq('store_id', storeId)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
+      const runProductsQuery = (withTrackStock) => {
+        let query = supabase
+          .from('products')
+          .select(buildProductSelect(withTrackStock), { count: 'exact' })
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .order('name', { ascending: true });
 
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+        if (search) {
+          query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+        }
+
+        if (categoryId !== 'all') {
+          query = query.eq('category_id', categoryId);
+        }
+
+        return query;
+      };
+
+      let { data, error, count } = await runProductsQuery(supportsStockTracking);
+
+      // Kolom `track_stock` belum ada di database -> ulangi query tanpa kolom
+      // tersebut agar katalog kasir tetap tampil (semua produk dianggap
+      // masih melacak stok).
+      if (error && supportsStockTracking && isMissingColumnError(error, 'track_stock')) {
+        setSupportsStockTracking(false);
+        ({ data, error, count } = await runProductsQuery(false));
       }
-
-      if (categoryId !== 'all') {
-        query = query.eq('category_id', categoryId);
-      }
-
-      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -176,7 +199,9 @@ export default function useTransaction() {
         ...p,
         stock: Array.isArray(p.inventory) 
           ? (p.inventory[0]?.qty_on_hand || 0) 
-          : (p.inventory?.qty_on_hand || 0)
+          : (p.inventory?.qty_on_hand || 0),
+        // Stok tanpa batas bila kolom track_stock = false. Tanpa kolom -> true.
+        track_stock: p.track_stock !== false
       }));
       
       if (channel === 'online') {
@@ -199,7 +224,7 @@ export default function useTransaction() {
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [currentPage, search, channel, categoryId, storeId]);
+  }, [currentPage, search, channel, categoryId, storeId, supportsStockTracking]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch produk kasir saat mount / filter berubah
@@ -210,14 +235,16 @@ export default function useTransaction() {
   // 4. CART LOGIC (DENGAN VALIDASI STOK)
   // ==========================================
   const addToCart = (product) => {
-    const availableStock = product.stock || 0;
+    const stockTracked = !isStockUnlimited(product);
+    const availableStock = Number(product.stock) || 0;
 
     setCartItems(prev => {
       const existingItem = prev.find(item => item.id === product.id);
       const currentQtyInCart = existingItem ? existingItem.qty : 0;
 
-      // PERBAIKAN 2: Validasi saat menambah 1 item
-      if (currentQtyInCart + 1 > availableStock) {
+      // PERBAIKAN 2: Validasi saat menambah 1 item.
+      // Dilewati bila stok produk tanpa batas (track_stock = false).
+      if (stockTracked && currentQtyInCart + 1 > availableStock) {
         alert(`⚠️ Stok tidak mencukupi!\nStok tersedia hanya ${availableStock} ${product.unit}.`);
         return prev; // Batalkan penambahan
       }
@@ -229,9 +256,8 @@ export default function useTransaction() {
       const platformFeePct = priceData ? Number(priceData.platform_fee_pct) : 0;
       const discountPct = Number(product.discount_pct) || 0;
       // Harga normal = harga channel (offline/online) setelah diskon persen produk.
-      // Diskon Cepat kasir (nominal Rp) dipotong dari harga normal ini.
+      // Diskon Cepat kasir (nominal Rp) dipotong dari TOTAL transaksi, bukan per item.
       const normalUnitPrice = Math.round(basePrice - (basePrice * (discountPct / 100)));
-      const unitPrice = normalUnitPrice;
       const hpp = Number(product.hpp) || 0;
       
       if (existingItem) {
@@ -239,15 +265,12 @@ export default function useTransaction() {
           if (item.id !== product.id) return item;
 
           const nextQty = item.qty + 1;
-          const normalLineTotal = item.base_unit_price * nextQty;
-          const discount = clampQuickDiscount(item.quick_discount, normalLineTotal);
-          const lineTotal = normalLineTotal - discount;
 
           return {
             ...item,
             qty: nextQty,
-            unit_price: nextQty > 0 ? lineTotal / nextQty : 0,
-            line_total: Math.round(lineTotal),
+            unit_price: item.base_unit_price,
+            line_total: Math.round(item.base_unit_price * nextQty),
           };
         });
       }
@@ -259,61 +282,44 @@ export default function useTransaction() {
         unit: product.unit,
         hpp: hpp,
         qty: 1,
-        unit_price: unitPrice, 
+        unit_price: normalUnitPrice, 
         original_price: basePrice, 
         discount_pct: discountPct,
-        // Harga normal per unit sebelum Diskon Cepat (acuan validasi & tampilan)
+        // Harga normal per unit (acuan tampilan & perhitungan baris)
         base_unit_price: normalUnitPrice,
-        quick_discount: 0,
         platform_fee_pct: platformFeePct,
-        line_total: unitPrice,
+        line_total: normalUnitPrice,
         category_name: product.categories?.name || 'Umum',
-        channel: targetChannel 
+        channel: targetChannel,
+        // false = stok tanpa batas: tidak divalidasi & tidak dikurangi.
+        track_stock: stockTracked,
+        stock: availableStock
       }];
     });
   };
 
   // ==========================================
-  // 4b. DISKON CEPAT (NOMINAL Rp) — KHUSUS CABANG UTAMA
-  // Kasir langsung mengetik nominal potongan (mis. 5.000) untuk total satu baris produk.
-  // Nilai potongan "dibakar" ke unit_price
-  // persis seperti perilaku discount_pct produk, sehingga subtotal, grandTotal,
-  // laporan, dan struk tetap konsisten (subtotal - discount = grand_total).
+  // 4b. DISKON CEPAT (NOMINAL Rp) — LEVEL TRANSAKSI
+  // Satu tombol di ringkasan keranjang (TransactionQuickDiscount) mengisi state
+  // `discount`. Nilainya dipotong dari subtotal sehingga
+  // grand_total = subtotal - discount — konsisten dengan kolom `sales.discount`,
+  // laporan keuangan, dan struk.
   // ==========================================
-  const applyItemDiscount = (productId, discountAmount) => {
-    setCartItems(prev =>
-      prev.map(item => {
-        if (item.id !== productId) return item;
-
-        const normalUnitPrice = Number(item.base_unit_price) || Number(item.unit_price) || 0;
-        const normalLineTotal = normalUnitPrice * item.qty;
-        const discount = clampQuickDiscount(discountAmount, normalLineTotal);
-        const lineTotal = normalLineTotal - discount;
-        const unitPrice = item.qty > 0 ? lineTotal / item.qty : 0;
-
-        return {
-          ...item,
-          quick_discount: discount,
-          unit_price: unitPrice,
-          line_total: Math.round(lineTotal)
-        };
-      })
-    );
-  };
-
-  const clearItemDiscount = (productId) => applyItemDiscount(productId, 0);
-
   const updateQty = (productId, newQty) => {
     if (newQty <= 0) {
       removeItem(productId);
       return;
     }
 
-    // PERBAIKAN 3: Validasi saat mengubah jumlah secara manual
+    // PERBAIKAN 3: Validasi saat mengubah jumlah secara manual.
+    // Dilewati bila stok produk tanpa batas (track_stock = false).
+    const cartItem = cartItems.find(item => item.id === productId);
     const originalProduct = products.find(p => p.id === productId);
-    const availableStock = originalProduct?.stock || 0;
+    const stockTracked =
+      cartItem?.track_stock !== false && !isStockUnlimited(originalProduct);
+    const availableStock = Number(originalProduct?.stock ?? cartItem?.stock) || 0;
 
-    if (newQty > availableStock) {
+    if (stockTracked && newQty > availableStock) {
       alert(`⚠️ Stok tidak mencukupi!\nMaksimal jumlah yang bisa dimasukkan adalah ${availableStock}.`);
       return; // Batalkan update, kembalikan ke nilai lama (tidak di-set)
     }
@@ -323,15 +329,12 @@ export default function useTransaction() {
         if (item.id !== productId) return item;
 
         const normalUnitPrice = Number(item.base_unit_price) || Number(item.unit_price) || 0;
-        const normalLineTotal = normalUnitPrice * newQty;
-        const discount = clampQuickDiscount(item.quick_discount, normalLineTotal);
-        const lineTotal = normalLineTotal - discount;
 
         return {
           ...item,
           qty: newQty,
-          unit_price: newQty > 0 ? lineTotal / newQty : 0,
-          line_total: Math.round(lineTotal),
+          unit_price: normalUnitPrice,
+          line_total: Math.round(normalUnitPrice * newQty),
         };
       })
     );
@@ -351,19 +354,17 @@ export default function useTransaction() {
   // 5. CALCULATIONS (PERHITUNGAN)
   // ==========================================
   const subtotal = Math.round(cartItems.reduce((sum, item) => sum + item.line_total, 0));
-  // Total Diskon Cepat yang diberikan kasir (nominal total per baris).
-  const itemDiscountTotal = Math.round(cartItems.reduce((sum, item) => {
-    return sum + (Number(item.quick_discount) || 0);
-  }, 0));
-  // Subtotal "harga normal" sebelum Diskon Cepat (untuk tampilan di keranjang).
-  const subtotalBeforeDiscount = subtotal + itemDiscountTotal;
+  // Diskon Cepat (nominal Rp) level transaksi: dibatasi agar tidak melebihi
+  // subtotal sehingga grand total tidak pernah negatif.
+  const discountAmount = Math.min(Math.max(0, Math.round(Number(discount) || 0)), subtotal);
   const platformFee = Math.round(cartItems.reduce((sum, item) => {
     return sum + ((item.line_total * item.platform_fee_pct) / 100);
   }, 0));
-  const grandTotal = Math.max(0, subtotal - discount);
-  const totalDiscount = itemDiscountTotal + discount;
-  // Hemat pelanggan = Diskon Cepat per item + diskon level transaksi (kalau ada).
-  const totalSavings = itemDiscountTotal + discount;
+  const grandTotal = Math.max(0, subtotal - discountAmount);
+  // Total potongan yang tercatat di kolom `sales.discount` & struk.
+  const totalDiscount = discountAmount;
+  // Hemat pelanggan = total Diskon Cepat yang diberikan kasir.
+  const totalSavings = discountAmount;
 
   // ==========================================
   // 6. CHECKOUT & DATABASE INSERT
@@ -394,7 +395,7 @@ export default function useTransaction() {
           sale_date: new Date().toISOString(),
           channel: finalChannel,
           payment_method: paymentData.payment_method,
-          subtotal: subtotalBeforeDiscount,
+          subtotal: subtotal,
           discount: totalDiscount,
           platform_fee: platformFee,
           grand_total: grandTotal,
@@ -420,8 +421,11 @@ export default function useTransaction() {
       const { error: itemsError } = await supabase.from('sale_items').insert(itemsToInsert);
       if (itemsError) throw itemsError;
 
-      // Update Stok (Inventory)
+      // Update Stok (Inventory) — produk dengan stok tanpa batas
+      // (track_stock = false) dilewati karena stoknya memang tidak dilacak.
       for (const item of cartItems) {
+        if (isStockUnlimited(item)) continue;
+
         const { data: currentStock } = await supabase
           .from('inventory')
           .select('qty_on_hand')
@@ -451,17 +455,15 @@ export default function useTransaction() {
           qty: item.qty,
           unit_price: item.unit_price,
           line_total: item.line_total,
-          // Info Diskon Cepat: harga normal per unit & total potongan baris ini
-          original_unit_price: Number(item.base_unit_price) || Number(item.unit_price) || 0,
-          discount_amount: Number(item.quick_discount) || 0
+          // Harga normal per unit — kini sama dengan unit_price karena Diskon
+          // Cepat dihitung pada level transaksi (bukan per item).
+          original_unit_price: Number(item.base_unit_price) || Number(item.unit_price) || 0
         })),
-        subtotal: subtotalBeforeDiscount,
+        subtotal: subtotal,
         discount: totalDiscount,
         grand_total: grandTotal,
         amount_paid: amountPaid,
-        // Diskon Cepat sudah "dibakar" ke unit_price, jadi sales.discount tetap
-        // diskon level transaksi. Dua baris ini hanya info tambahan untuk struk.
-        item_discount_total: itemDiscountTotal,
+        // Diskon Cepat (level transaksi) diinformasikan terpisah di struk.
         total_savings: totalSavings,
         change: change,
         payment_method: paymentData.payment_method
@@ -510,16 +512,13 @@ export default function useTransaction() {
     setCustomerName,
     isMainBranch,
     storeName,
-    applyItemDiscount,
-    clearItemDiscount,
-    itemDiscountTotal,
-    subtotalBeforeDiscount,
-    totalSavings,
-    discount,
+    // Diskon Cepat level transaksi (sudah dibatasi agar tidak melebihi subtotal).
+    discount: discountAmount,
     setDiscount,
     subtotal,
     platformFee, 
     grandTotal,
+    supportsStockTracking,
     isPaymentModalOpen,
     handleCheckout,
     closePaymentModal,

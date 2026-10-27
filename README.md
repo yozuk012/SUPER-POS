@@ -84,6 +84,8 @@ maupun perangkat mobile.
 - **Salin data antar cabang** — kategori, bahan baku, dan produk beserta resep,
   harga multi-channel, dan gambar produk.
 - Diskon Cepat di halaman transaksi hanya tersedia untuk cabang utama.
+- Stok tanpa batas (unlimited) memerlukan kolom `products.track_stock`
+  (lihat SQL migrasi di `src/blueprint/DATABASE.MD`).
 
 ### 📦 Master Data
 
@@ -92,6 +94,10 @@ maupun perangkat mobile.
   harga pembelian, indikator mudah rusak, serta masa simpan.
 - **Produk** — nama, SKU (dibuat otomatis atau diisi manual), kategori, satuan,
   stok, diskon, foto, status aktif, dan opsi penjualan online.
+- **Stok tanpa batas (unlimited)** — satu toggle di form produk (atau tombol
+  cepat di daftar produk) untuk menonaktifkan pelacakan stok produk. Produk
+  seperti ini tetap bisa dijual walau stok 0 dan stoknya tidak dikurangi
+  otomatis saat transaksi.
 - **Harga multi-channel** — harga khusus per channel (offline/online) beserta
   potongan biaya platform.
 
@@ -108,13 +114,18 @@ maupun perangkat mobile.
 
 - Katalog produk dengan pencarian, filter kategori, dan pagination.
 - Keranjang: tambah, kurangi, hapus item, dan ubah jumlah.
-- **Diskon Cepat** per item (khusus cabang utama).
+- **Diskon Cepat** — satu tombol untuk total transaksi (khusus cabang utama),
+  bukan per item, sehingga potongan langsung terlihat di total bayar.
 - Channel penjualan **offline/online** dengan perhitungan markup dan biaya platform.
 - Tiga metode pembayaran:
   - **Tunai** — input uang diterima dan hitung kembalian.
   - **Transfer bank** — konfirmasi manual setelah dana masuk.
-  - **QRIS/E-Wallet** — tampilkan QRIS toko dan konfirmasi manual.
-- Stok produk otomatis berkurang setelah pembayaran berhasil.
+  - **QRIS/E-Wallet** — tampilkan QRIS toko, **bagikan QRIS beserta nominal
+    tagihan ke WhatsApp, Telegram, atau media sosial lain** (tombol bagikan
+    bawaan perangkat, tautan WhatsApp/Telegram, dan salin rincian tagihan),
+    lalu konfirmasi manual.
+- Stok produk otomatis berkurang setelah pembayaran berhasil — kecuali produk
+  dengan **stok tanpa batas (unlimited)** yang stoknya memang tidak dilacak.
 - Struk dapat dicetak melalui dialog print browser atau printer thermal Bluetooth.
 
 ### 🧾 Cetak Struk

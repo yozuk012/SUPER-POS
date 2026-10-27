@@ -106,6 +106,27 @@ Daftar produk jadi yang dijual ke pelanggan.
 - **`created_at`** (`timestamptz`): Waktu pembuatan data produk.
 - **`discount_pct`** (`numeric`): Persentase diskon langsung pada produk, diisi dari Form Produk dan diterapkan otomatis saat produk dimasukkan ke transaksi. Nilai valid 0-100.
 - **`online_markup_pct`** (`int4`): Persentase markup spesifik online untuk produk ini.
+- **`track_stock`** (`bool`): Status pelacakan stok (default: `true`). Jika `false`,
+  stok produk dianggap **tanpa batas (unlimited)** — kasir tidak dibatasi stok,
+  produk tetap bisa dijual walau stok 0, dan baris `inventory` tidak dikurangi
+  otomatis setelah transaksi. Produk lama yang belum punya kolom ini dianggap
+  tetap dilacak (`true`).
+
+**SQL Migrasi (menambahkan kolom untuk fitur Stok Tanpa Batas):**
+
+```sql
+-- Menambahkan kolom pelacakan stok pada tabel products
+ALTER TABLE products
+ADD COLUMN IF NOT EXISTS track_stock boolean NOT NULL DEFAULT true;
+
+-- (Opsional) Deskripsi kolom agar mudah diingat di Table Editor
+COMMENT ON COLUMN products.track_stock IS 'false = stok tanpa batas (unlimited): tidak divalidasi & tidak dikurangi otomatis saat transaksi';
+```
+
+> Aplikasi tetap berjalan sebelum migrasi dijalankan: kolom `track_stock` hanya
+> dikirim saat menyimpan produk bila kolomnya sudah ada, sedangkan katalog kasir
+> otomatis mengulang query tanpa kolom tersebut (semua produk dianggap masih
+> melacak stok).
 
 ---
 

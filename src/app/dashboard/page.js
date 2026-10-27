@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -16,6 +17,7 @@ import RecentSalesList from "./components/RecentSalesList";
 import TopProductsCarousel from "./components/TopProductsCarousel";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user, merchant, loading: authLoading } = useAuth();
   const { storeId } = useActiveStore();
   const { storeName: activeStoreName } = useActiveStoreName(user?.id, storeId);
@@ -30,29 +32,37 @@ export default function DashboardPage() {
     error
   } = useDashboard(storeId, user?.id, dateRange);
 
-  const isLoading = authLoading || dashboardLoading;
-
   const storeName = activeStoreName || merchant?.store_name || "Toko Anda";
   const userName = merchant?.full_name || user?.email?.split('@')[0] || "Pengguna";
 
   const today = formatFullDate(new Date());
 
-  // ── LOADING STATE ────────────────────────────────────────
-  if (isLoading) {
+  // ── Belum login setelah sesi selesai diperiksa -> ke halaman login ─────
+  // Redirect dilakukan di dalam effect (bukan saat render) dan hanya setelah
+  // pengecekan sesi selesai, sehingga layar login tidak pernah muncul
+  // sekilas untuk user yang sebenarnya masih punya sesi aktif.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth/login");
+    }
+  }, [authLoading, user, router]);
+
+  // ── Sesi belum siap / belum login: layar loading penuh tanpa sidebar ───
+  // Memakai spinner (bukan `null`) supaya tidak ada kedipan area putih, dan
+  // JANGAN pernah menampilkan halaman login di sini.
+  if (authLoading || !user) {
     return (
-      <PageLayout title="Dashboard">
-        <div className="flex flex-col items-center justify-center h-[60vh]">
-          <div className="relative">
-            <div className="w-14 h-14 rounded-full border-4 border-blue-200" />
-            <div className="absolute inset-0 w-14 h-14 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
-          </div>
-          <p className="mt-5 text-sm text-slate-500">Memuat data dashboard & keuangan...</p>
-        </div>
-      </PageLayout>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600"
+          role="status"
+          aria-label="Memeriksa sesi"
+        />
+      </div>
     );
   }
 
-  // ── ERROR STATE ──────────────────────────────────────────
+  // ── ERROR STATE ───────────────────────────────────────────────────────────
   if (error) {
     return (
       <PageLayout title="Dashboard">
@@ -67,6 +77,21 @@ export default function DashboardPage() {
               Pastikan koneksi internet stabil atau coba refresh halaman.
             </p>
           </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // ── LOADING STATE (data dashboard) — sidebar tetap tampil ─────────────
+  if (dashboardLoading) {
+    return (
+      <PageLayout title="Dashboard">
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-full border-4 border-blue-200" />
+            <div className="absolute inset-0 w-14 h-14 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
+          </div>
+          <p className="mt-5 text-sm text-slate-500">Memuat data dashboard & keuangan...</p>
         </div>
       </PageLayout>
     );

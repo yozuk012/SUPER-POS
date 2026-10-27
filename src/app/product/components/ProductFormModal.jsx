@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- preview foto produk (blob/storage URL), tidak bisa dioptimasi next/image */
 
-import { FaTimes, FaCamera, FaCheckCircle, FaBan } from "react-icons/fa";
+import { FaTimes, FaCamera, FaCheckCircle, FaBan, FaInfinity } from "react-icons/fa";
 
 export default function ProductFormModal({
   isModalOpen,
@@ -217,7 +217,7 @@ export default function ProductFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>
-                  Stok Awal <span className="text-red-500">*</span>
+                  Stok Awal {formData.track_stock !== false && <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="number"
@@ -226,8 +226,44 @@ export default function ProductFormModal({
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
-                  className={inputBase}
+                  disabled={formData.track_stock === false}
+                  className={`${inputBase} ${
+                    formData.track_stock === false ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
+                  }`}
                 />
+                {formData.track_stock === false && (
+                  <p className="text-[10px] text-emerald-700 mt-1 font-semibold">
+                    Diabaikan karena stok produk tanpa batas.
+                  </p>
+                )}
+              </div>
+
+              {/* Stok tanpa batas (unlimited) */}
+              <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="track_stock"
+                    checked={formData.track_stock !== false}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    {formData.track_stock === false ? (
+                      <FaInfinity size={12} className="text-emerald-600" />
+                    ) : (
+                      <FaCheckCircle size={12} className="text-green-600" />
+                    )}
+                    {formData.track_stock === false
+                      ? "Stok tanpa batas (unlimited)"
+                      : "Stok dilacak otomatis"}
+                  </span>
+                </label>
+                <p className="text-[10px] text-slate-500 mt-2 leading-snug">
+                  Hilangkan centang ini bila jumlah stok produk tidak perlu dihitung (mis.
+                  produk titipan atau jasa). Produk tetap bisa dijual walau stok 0 dan stoknya
+                  tidak berkurang otomatis setelah transaksi.
+                </p>
               </div>
 
               <div className="sm:col-span-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">

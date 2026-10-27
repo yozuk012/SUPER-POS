@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { FaGlobe, FaStore, FaExclamation } from "react-icons/fa";
+import { FaGlobe, FaStore, FaExclamation, FaInfinity } from "react-icons/fa";
 
 export default function TransactionProductGrid({
   products,
@@ -79,9 +79,12 @@ export default function TransactionProductGrid({
           ? Math.round(displayPrice - (displayPrice * (discountPct / 100)))
           : displayPrice;
 
-        const stock = product.stock || 0;
-        const isOutOfStock = stock === 0;
-        const isLowStock = stock > 0 && stock <= 10;
+        // Stok tanpa batas (track_stock = false): produk selalu bisa dijual
+        // walau stok 0, dan stok tidak dikurangi setelah transaksi.
+        const stockUnlimited = product.track_stock === false;
+        const stock = Number(product.stock) || 0;
+        const isOutOfStock = !stockUnlimited && stock === 0;
+        const isLowStock = !stockUnlimited && stock > 0 && stock <= 10;
 
         return (
           <div
@@ -155,13 +158,19 @@ export default function TransactionProductGrid({
                 </p>
 
                 <div className={`text-xs font-semibold px-2 py-1.5 rounded-md flex items-center gap-1.5 w-fit ${
-                  isOutOfStock
-                    ? 'bg-red-100 text-red-700 border border-red-200'
-                    : isLowStock
-                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                      : 'bg-blue-100 text-blue-700 border border-blue-200'
+                  stockUnlimited
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    : isOutOfStock
+                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      : isLowStock
+                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                        : 'bg-blue-100 text-blue-700 border border-blue-200'
                 }`}>
-                  {isOutOfStock ? (
+                  {stockUnlimited ? (
+                    <>
+                      <FaInfinity size={10} /> Stok: Tanpa batas
+                    </>
+                  ) : isOutOfStock ? (
                     <>Stok Habis</>
                   ) : isLowStock ? (
                     <>

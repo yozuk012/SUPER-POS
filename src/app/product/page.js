@@ -20,6 +20,7 @@ export default function ProductsPage() {
     stores, categories, products, loading,
     formData, editingId, error, isSubmitting, isModalOpen,
     handleChange, handleFileChange, handleSubmit, deleteProduct, toggleProductStatus,
+    toggleStockTracking,
     openAddModal, openEditModal, closeModal,
     searchQuery, setSearchQuery,
     filterCategory, setFilterCategory,
@@ -66,6 +67,7 @@ export default function ProductsPage() {
         filterStatus={filterStatus}
         openEditModal={openEditModal}
         toggleProductStatus={toggleProductStatus}
+        toggleStockTracking={toggleStockTracking}
         deleteProduct={deleteProduct}
         onOpenCopyModal={canCopy ? () => setIsCopyModalOpen(true) : null}
       />

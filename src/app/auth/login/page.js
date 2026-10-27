@@ -19,6 +19,21 @@ export default function LoginPage() {
     if (!loading && user) router.replace('/dashboard');
   }, [loading, user, router]);
 
+  // Selama sesi masih diperiksa (atau user ternyata sudah punya sesi aktif),
+  // tampilkan layar loading — JANGAN render form login. Dengan begitu halaman
+  // login tidak sempat "berkedip" di layar sebelum user dilempar ke /dashboard.
+  if (loading || user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600"
+          role="status"
+          aria-label="Memeriksa sesi"
+        />
+      </div>
+    );
+  }
+
   // ── Shared style tokens (konsisten dgn register page) ────────
   const inputClass =
     'mt-1.5 w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm ' +

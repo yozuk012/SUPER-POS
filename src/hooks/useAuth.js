@@ -407,7 +407,19 @@ export function useAuth() {
       setLoading(true);
       setUser(null);
       setMerchant(null);
+
+      // Bersihkan semua local/session storage aplikasi — termasuk sisa token
+      // sesi Supabase — supaya tidak ada data lama yang tertinggal.
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+
+      // Penanda onboarding dipasang SETELAH storage dibersihkan agar tidak
+      // ikut terhapus: setelah logout user harus langsung diarahkan ke
+      // halaman login, bukan dipaksa melewati Welcome Page lagi.
       markOnboardingCompleted();
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       router.push('/auth/login');

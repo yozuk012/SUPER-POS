@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- thumbnail produk dinamis (storage URL) berukuran tetap via CSS */
 
-import { FaBoxOpen, FaEdit, FaTrash, FaPowerOff, FaGlobe, FaExclamation } from "react-icons/fa";
+import { FaBoxOpen, FaEdit, FaTrash, FaPowerOff, FaGlobe, FaExclamation, FaInfinity } from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
 
 const formatRupiah = (number) => {
@@ -27,6 +27,7 @@ export default function ProductList({
   filterStatus,
   openEditModal,
   toggleProductStatus,
+  toggleStockTracking,
   deleteProduct,
   onOpenCopyModal,
 }) {
@@ -126,7 +127,11 @@ export default function ProductList({
 
                     <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-blue-100">
                       <div className="flex items-center gap-1.5">
-                        {prod.stock === 0 ? (
+                        {prod.track_stock === false ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                            <FaInfinity size={8} /> Tanpa batas
+                          </span>
+                        ) : prod.stock === 0 ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-red-100 text-red-700 border border-red-200">
                             Habis
                           </span>
@@ -144,7 +149,7 @@ export default function ProductList({
                           {prod.is_active !== false ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 w-full">
+                      <div className="grid grid-cols-2 gap-2 w-full">
                         <button type="button" onClick={() => openEditModal(prod)} className="min-h-11 flex items-center justify-center gap-1.5 px-2 text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors text-xs font-bold" aria-label="Edit produk">
                           <FaEdit size={13} />
                           <span>Edit</span>
@@ -152,6 +157,16 @@ export default function ProductList({
                         <button type="button" onClick={() => toggleProductStatus(prod)} title={prod.is_active !== false ? 'Nonaktifkan produk' : 'Aktifkan produk'} className={`min-h-11 flex items-center justify-center gap-1.5 px-2 rounded-lg transition-colors text-xs font-bold ${prod.is_active !== false ? 'text-amber-700 bg-amber-100 hover:bg-amber-200' : 'text-green-700 bg-green-100 hover:bg-green-200'}`} aria-label="Toggle status produk">
                           <FaPowerOff size={13} />
                           <span>{prod.is_active !== false ? 'Nonaktif' : 'Aktif'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleStockTracking(prod)}
+                          title={prod.track_stock === false ? 'Aktifkan kembali pelacakan stok' : 'Buat stok tanpa batas (unlimited)'}
+                          className={`min-h-11 flex items-center justify-center gap-1.5 px-2 rounded-lg transition-colors text-xs font-bold ${prod.track_stock === false ? 'text-emerald-700 bg-emerald-100 hover:bg-emerald-200' : 'text-blue-700 bg-blue-100 hover:bg-blue-200'}`}
+                          aria-label="Toggle stok tanpa batas"
+                        >
+                          <FaInfinity size={13} />
+                          <span>{prod.track_stock === false ? 'Pakai Stok' : 'Tanpa Batas'}</span>
                         </button>
                         <button type="button" onClick={() => deleteProduct(prod.id)} className="min-h-11 flex items-center justify-center gap-1.5 px-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors text-xs font-bold" aria-label="Hapus produk">
                           <FaTrash size={13} />
@@ -237,7 +252,11 @@ export default function ProductList({
                       </td>
 
                       <td className="px-4 py-3 text-center">
-                        {prod.stock === 0 ? (
+                        {prod.track_stock === false ? (
+                          <span className="text-xs px-2 py-1 rounded font-semibold bg-emerald-100 text-emerald-700 inline-flex items-center justify-center gap-1">
+                            <FaInfinity size={10} /> Tanpa batas
+                          </span>
+                        ) : prod.stock === 0 ? (
                           <span className="text-xs px-2 py-1 rounded font-semibold bg-red-100 text-red-700">
                             Habis
                           </span>
@@ -264,6 +283,9 @@ export default function ProductList({
                           </button>
                           <button type="button" onClick={() => toggleProductStatus(prod)} title={prod.is_active !== false ? 'Nonaktifkan produk' : 'Aktifkan produk'} className={`min-h-11 min-w-11 p-2 rounded-lg transition-colors ${prod.is_active !== false ? 'text-amber-600 hover:bg-amber-100' : 'text-green-600 hover:bg-green-100'}`} aria-label="Toggle status produk">
                             <FaPowerOff size={14} />
+                          </button>
+                          <button type="button" onClick={() => toggleStockTracking(prod)} title={prod.track_stock === false ? 'Aktifkan kembali pelacakan stok' : 'Buat stok tanpa batas (unlimited)'} className={`min-h-11 min-w-11 p-2 rounded-lg transition-colors ${prod.track_stock === false ? 'text-emerald-600 hover:bg-emerald-100' : 'text-blue-600 hover:bg-blue-100'}`} aria-label="Toggle stok tanpa batas">
+                            <FaInfinity size={14} />
                           </button>
                           <button type="button" onClick={() => deleteProduct(prod.id)} className="min-h-11 min-w-11 p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" aria-label="Hapus produk">
                             <FaTrash size={14} />

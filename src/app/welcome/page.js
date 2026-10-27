@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import {
   FiLogIn,
   FiUserPlus,
@@ -153,9 +154,29 @@ function WelcomeContent() {
   )
 
   useEffect(() => {
-    if (completedOnboarding && !isGuideMode) {
-      // Pembukaan berikutnya / setelah logout -> bypass Welcome Page.
-      router.replace('/auth/login')
+    if (!completedOnboarding || isGuideMode) return
+
+    let isMounted = true
+
+    // Pembukaan berikutnya / setelah logout -> bypass Welcome Page.
+    // Tujuan dibedakan berdasarkan sesi Supabase yang masih aktif:
+    //   - sesi aktif  -> /dashboard (jangan singgah di /auth/login agar
+    //                    tidak ada kedipan halaman login)
+    //   - tanpa sesi  -> /auth/login
+    const resolveDestination = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!isMounted) return
+        router.replace(session?.access_token ? '/dashboard' : '/auth/login')
+      } catch {
+        if (isMounted) router.replace('/auth/login')
+      }
+    }
+
+    resolveDestination()
+
+    return () => {
+      isMounted = false
     }
   }, [completedOnboarding, isGuideMode, router])
 
@@ -406,7 +427,13 @@ function WelcomeContent() {
                   User bisa input diskon atau tidak. Jika iya, user inputkan diskon
                   produk. Opsi ini optional.
                 </li>
-                <li>Input stok produk.</li>
+                <li>
+                  Input stok produk. Jika stok produk tidak perlu dihitung (mis. produk
+                  titipan atau jasa), hilangkan centang{' '}
+                  <Strong>Stok dilacak otomatis</Strong> agar stok produk menjadi{' '}
+                  <Strong>tanpa batas (unlimited)</Strong> — produk tetap bisa dijual
+                  walau stok 0 dan stoknya tidak berkurang otomatis setelah transaksi.
+                </li>
                 <li>
                   User bisa checklist opsi untuk memasukkan produk ke dalam daftar produk
                   online dan memasukkan persentasenya. Opsi ini optional.
@@ -527,17 +554,19 @@ function WelcomeContent() {
                 </li>
                 <li>User juga bisa menghapus produk dari keranjang belanja.</li>
                 <li>
-                  Di halaman transaksi terdapat fitur <Strong>Diskon Cepat</Strong> yang
-                  bisa digunakan untuk memberikan diskon kepada pembeli. Namun fitur ini
-                  hanya berlaku pada toko utama.
+                  Di halaman transaksi terdapat fitur <Strong>Diskon Cepat</Strong> berupa{' '}
+                  <Strong>satu tombol untuk total transaksi</Strong> (bukan per item).
+                  Fitur ini hanya berlaku pada toko utama.
                 </li>
                 <li>
-                  Format potongan harga menggunakan format seperti <Strong>10rb</Strong>,{' '}
-                  <Strong>20rb</Strong>, atau <Strong>30rb</Strong>.
+                  Klik tombol <Strong>Diskon Cepat (Total Transaksi)</Strong>, lalu isi
+                  nominal potongan dalam Rupiah — misalnya <Strong>5000</Strong> — atau
+                  pilih nominal cepat yang tersedia, lalu tekan <Strong>Terapkan</Strong>{' '}
+                  agar potongan langsung dihitung pada total bayar.
                 </li>
                 <li>
-                  Jika user ingin memberikan diskon kepada pembeli, user bisa menginputkan
-                  jumlah diskon yang diinginkan.
+                  Potongan dapat dihapus dengan tombol <Strong>Hapus</Strong> pada panel
+                  Diskon Cepat, dan otomatis direset saat keranjang dikosongkan.
                 </li>
                 <li>
                   Jika tidak, user bisa langsung klik tombol <Strong>Bayar</Strong>.
@@ -563,8 +592,12 @@ function WelcomeContent() {
                 </li>
                 <li>
                   <Strong>E-Wallet / QRIS</Strong>: OVO, DANA, GOPAY, LINK AJA alias QRIS.
-                  User bisa scan QRIS pembeli pada aplikasi ini, dan jika uang sudah masuk
-                  user bisa melakukan konfirmasi pembayaran.
+                  Aplikasi menampilkan QRIS toko, dan user dapat menekan tombol{' '}
+                  <Strong>Bagikan QRIS</Strong> untuk mengirim gambar QRIS beserta nominal
+                  tagihan ke pembeli lewat <Strong>WhatsApp</Strong>, <Strong>Telegram</Strong>,
+                  atau media sosial lain melalui menu bagikan di perangkat. Ada juga tombol{' '}
+                  <Strong>Salin Rincian Tagihan</Strong> untuk menempelkan rinciannya secara
+                  manual. Jika uang sudah masuk, user melakukan konfirmasi pembayaran.
                 </li>
               </UL>
 

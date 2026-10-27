@@ -30,7 +30,10 @@ import { useActiveStoreName } from "@/hooks/useActiveStoreName";
  *   5. PENGATURAN    → Pengaturan
  */
 const menuItems = [
-  { name: "Beranda", href: "/", icon: MdHome },
+  // Beranda diarahkan langsung ke /dashboard (bukan "/") supaya user yang
+  // sudah login tidak melewati rantai redirect "/" -> "/welcome" -> dulu
+  // sempat singgah di halaman login sebelum akhirnya masuk dashboard.
+  { name: "Beranda", href: "/dashboard", icon: MdHome },
 
   { group: "MASTER DATA" },
   { name: "Kategori", href: "/category", icon: MdCategory },

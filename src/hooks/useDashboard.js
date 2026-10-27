@@ -104,8 +104,12 @@ export function useDashboard(storeId, userId, dateRange) {
       const totalPenjualan = currentSales.reduce((sum, sale) => sum + (Number(sale.grand_total) || 0), 0);
       const totalPengeluaran = currentExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
       
-      // Laba Kotor = Total Pendapatan dari Item - Total HPP dari Item yang terjual
-      const totalRevenueFromItems = currentSaleItems.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
+      // Laba Kotor = Pendapatan penjualan - Total HPP dari item yang terjual.
+      // Diskon Cepat (level transaksi) tidak lagi "dibakar" ke line_total item,
+      // jadi pendapatan diambil dari grand total penjualan (sudah bersih dari
+      // diskon) agar laba kotor tidak berlebihan. Untuk transaksi lama nilainya
+      // tetap identik karena diskonnya dulu sudah terpotong di line_total.
+      const totalRevenueFromItems = totalPenjualan;
       const totalHppFromItems = currentSaleItems.reduce((sum, item) => sum + ((Number(item.qty) || 0) * (Number(item.hpp_snapshot) || 0)), 0);
       const labaKotor = totalRevenueFromItems - totalHppFromItems;
       
