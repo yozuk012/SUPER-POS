@@ -43,3 +43,6 @@ next-env.d.ts
 # seed heavy assets (mengabaikan gambar seed, namun tetap menyimpan data.json)
 /src/seeds/images/
 /src/app/api/seed-images/
+
+#blueprint
+/src/blueprint/
