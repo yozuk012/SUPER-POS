@@ -19,6 +19,7 @@ import useSeedData from '@/hooks/useSeedData';
 import {
   SEED_DEFAULT_ROUNDING_STEP,
   SEED_EXISTING_MODES,
+  SEED_PRICE_MODES,
 } from '@/lib/seedCatalog';
 
 // Flag kontrol fitur seed data (Hanya untuk Developer):
@@ -61,6 +62,7 @@ function SeedDataContent() {
     createInventory: true,
     existingMode: SEED_EXISTING_MODES.FILL_EMPTY,
     roundingStep: SEED_DEFAULT_ROUNDING_STEP,
+    priceMode: SEED_PRICE_MODES.WITH_PRICE,
   });
 
   const handleOptionChange = (e) => {
@@ -83,6 +85,11 @@ function SeedDataContent() {
         ? 'produk lama dilewati'
         : 'hanya harga produk lama yang masih 0 yang diisi';
 
+  const priceModeLabel =
+    options.priceMode === SEED_PRICE_MODES.ZERO_PRICE
+      ? 'harga kosong (0)'
+      : `harga offline dibulatkan ke Rp${options.roundingStep.toLocaleString('id-ID')}`;
+
   // 3. Konfirmasi sebelum menjalankan seed (proses menulis data ke database)
   const handleRun = async () => {
     if (isSeeding) return;
@@ -90,7 +97,7 @@ function SeedDataContent() {
     const confirmMessage =
       `Jalankan seed data ke toko "${store?.name || '-'}"?\n\n` +
       `• ${catalog.categories.length} kategori\n` +
-      `• ${catalog.products.length} produk (harga offline dibulatkan ke Rp${options.roundingStep.toLocaleString('id-ID')})\n` +
+      `• ${catalog.products.length} produk (${priceModeLabel})\n` +
       `• Harga online disimpan apa adanya, HPP tidak diubah\n` +
       `• Produk lama: ${existingModeLabel}\n\n` +
       `Tidak ada data yang dihapus. Lanjutkan?`;

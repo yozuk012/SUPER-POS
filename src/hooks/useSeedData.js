@@ -12,6 +12,7 @@ import {
   slugify,
   SEED_DEFAULT_ROUNDING_STEP,
   SEED_EXISTING_MODES,
+  SEED_PRICE_MODES,
 } from '@/lib/seedCatalog';
 
 // Jumlah produk yang diproses bersamaan (upload gambar + insert) per batch
@@ -161,6 +162,7 @@ export function useSeedData() {
       createInventory = true,
       existingMode = SEED_EXISTING_MODES.FILL_EMPTY,
       roundingStep = SEED_DEFAULT_ROUNDING_STEP,
+      priceMode = SEED_PRICE_MODES.WITH_PRICE,
     } = options;
 
     setIsSeeding(true);
@@ -184,6 +186,7 @@ export function useSeedData() {
       inventoryCreated: 0,
       roundingStep,
       existingMode,
+      priceMode,
       failedRows: [],
       finishedAt: null,
     };
@@ -275,7 +278,11 @@ export function useSeedData() {
       );
 
       // Harga offline dihitung ulang sesuai pembulatan yang dipilih user.
+      // Jika priceMode adalah ZERO_PRICE, semua harga jadi 0.
       const pricedProducts = catalog.products.map((item) => {
+        if (priceMode === SEED_PRICE_MODES.ZERO_PRICE) {
+          return { ...item, base_price: 0, offline_price: 0, online_price: 0 };
+        }
         const offlinePrice = calculateOfflinePrice(item.online_price, roundingStep);
         return { ...item, base_price: offlinePrice, offline_price: offlinePrice };
       });

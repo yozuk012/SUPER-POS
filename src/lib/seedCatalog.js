@@ -28,6 +28,12 @@ export const SEED_PRICE_DIVISOR = 1 + SEED_ONLINE_MARKUP_PCT / 100; // 1.25
 export const SEED_PRICE_ROUNDING_OPTIONS = [500, 1000];
 export const SEED_DEFAULT_ROUNDING_STEP = 1000;
 
+// Pilihan mode harga seed (dengan nominal atau harga 0/kosong)
+export const SEED_PRICE_MODES = {
+  WITH_PRICE: 'with-price',
+  ZERO_PRICE: 'zero-price',
+};
+
 // Mode untuk produk yang namanya sudah ada di database.
 export const SEED_EXISTING_MODES = {
   SKIP: 'skip',

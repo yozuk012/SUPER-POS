@@ -4,6 +4,7 @@ import { FiSliders } from 'react-icons/fi';
 import {
   SEED_DEFAULT_ROUNDING_STEP,
   SEED_EXISTING_MODES,
+  SEED_PRICE_MODES,
   SEED_PRICE_ROUNDING_OPTIONS,
 } from '@/lib/seedCatalog';
 
@@ -19,6 +20,21 @@ const OPTIONS = [
     label: 'Buat baris stok awal (100) untuk setiap produk baru',
     description:
       'Sama seperti perilaku form produk: setiap produk baru langsung punya baris di tabel inventory.',
+  },
+];
+
+const PRICE_MODE_OPTIONS = [
+  {
+    value: SEED_PRICE_MODES.WITH_PRICE,
+    label: 'Dengan Nominal Harga',
+    description:
+      'Produk dibuat dengan harga sesuai data seed (harga online disimpan, offline dihitung & dibulatkan).',
+  },
+  {
+    value: SEED_PRICE_MODES.ZERO_PRICE,
+    label: 'Harga Kosong (0)',
+    description:
+      'Produk dibuat tanpa harga (harga offline & online = 0). Isi harga manual nanti di menu Produk.',
   },
 ];
 
@@ -102,6 +118,34 @@ export default function SeedOptionsCard({ options, onChange, disabled }) {
                 name="existingMode"
                 value={option.value}
                 checked={options.existingMode === option.value}
+                onChange={onChange}
+                disabled={disabled}
+                className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-800">{option.label}</span>
+                <span className="block text-xs text-gray-500 mt-0.5">{option.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Mode harga produk */}
+      <div className="mt-5 pt-4 border-t border-gray-100">
+        <p className="text-sm font-semibold text-gray-800">Mode Harga Produk</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Pilih apakah produk dibuat dengan nominal harga atau harga kosong (isi nanti).
+        </p>
+
+        <div className="space-y-2 mt-3">
+          {PRICE_MODE_OPTIONS.map((option) => (
+            <label key={option.value} className={optionCardClass(disabled)}>
+              <input
+                type="radio"
+                name="priceMode"
+                value={option.value}
+                checked={options.priceMode === option.value}
                 onChange={onChange}
                 disabled={disabled}
                 className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
