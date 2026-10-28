@@ -19,6 +19,7 @@ export function useGlobalOnlineMarkup() {
   const [successMessage, setSuccessMessage] = useState('');
   
   const [newPercentage, setNewPercentage] = useState('');
+  const [selectionMode, setSelectionMode] = useState('online'); // 'online', 'offline', 'all'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   
@@ -87,12 +88,23 @@ export function useGlobalOnlineMarkup() {
   }, [fetchProducts]);
 
   // ==========================================
-  // 3. HANDLE PERCENTAGE INPUT
+  // 3. HANDLE PERCENTAGE INPUT & SELECTION
   // ==========================================
   const handlePercentageChange = (e) => {
     const value = e.target.value;
     const sanitized = value.replace(/[^0-9]/g, '').slice(0, 3);
     setNewPercentage(sanitized);
+    setError(null);
+    setSuccessMessage('');
+    
+    if (showPreview) {
+      setShowPreview(false);
+      setPreviewData([]);
+    }
+  };
+
+  const handleSelectionChange = (mode) => {
+    setSelectionMode(mode);
     setError(null);
     setSuccessMessage('');
     
@@ -127,7 +139,16 @@ export function useGlobalOnlineMarkup() {
     setError(null);
     const pct = parseFloat(newPercentage);
 
-    const preview = products.map(product => {
+    // Filter produk berdasarkan selection mode
+    let filteredProducts = products;
+    if (selectionMode === 'online') {
+      filteredProducts = products.filter(p => p.has_online_price);
+    } else if (selectionMode === 'offline') {
+      filteredProducts = products.filter(p => !p.has_online_price);
+    }
+    // 'all' -> semua produk
+
+    const preview = filteredProducts.map(product => {
       const newOnlinePrice = calculateOnlinePrice(product.base_price, pct);
       const priceDifference = newOnlinePrice - product.current_online_price;
       const priceChangePct = product.current_online_price > 0 
@@ -153,7 +174,7 @@ export function useGlobalOnlineMarkup() {
     preview.sort((a, b) => Math.abs(b.price_difference) - Math.abs(a.price_difference));
     setPreviewData(preview);
     setShowPreview(true);
-  }, [newPercentage, products, validatePercentage]);
+  }, [newPercentage, products, validatePercentage, selectionMode]);
 
   // ==========================================
   // 6. APPLY GLOBAL MARKUP (FIXED VERSION)
@@ -167,22 +188,33 @@ export function useGlobalOnlineMarkup() {
 
     const pct = parseFloat(newPercentage);
 
-    // Hanya proses produk yang SUDAH punya harga online (is_online = true)
-    const productsToUpdate = products.filter(p => p.has_online_price);
+    // Filter produk berdasarkan selection mode
+    let productsToUpdate = products;
+    if (selectionMode === 'online') {
+      productsToUpdate = products.filter(p => p.has_online_price);
+    } else if (selectionMode === 'offline') {
+      productsToUpdate = products.filter(p => !p.has_online_price);
+    }
+    // 'all' -> semua produk
 
     if (productsToUpdate.length === 0) {
-      setError('Tidak ada produk dengan status online aktif untuk diupdate.');
+      setError(`Tidak ada produk ${selectionMode === 'online' ? 'online' : selectionMode === 'offline' ? 'offline' : ''} untuk diupdate.`);
       return;
     }
 
+    const modeText = selectionMode === 'online' ? 'produk online (sudah punya harga online)' :
+                     selectionMode === 'offline' ? 'produk offline (belum punya harga online)' :
+                     'semua produk (online + offline)';
+    
     const confirmMessage = 
       `⚠️ KONFIRMASI PERUBAHAN\n\n` +
       `Anda akan mengubah persentase markup online untuk:\n` +
-      `📦 ${productsToUpdate.length} produk (yang sudah aktif online)\n\n` +
+      `📦 ${productsToUpdate.length} produk (${modeText})\n\n` +
       `Persentase baru: ${pct}%\n\n` +
       `Perubahan akan mengupdate:\n` +
       `✓ Kolom online_markup_pct di tabel products\n` +
-      `✓ Kolom price di tabel product_prices (channel online)\n\n` +
+      `✓ Kolom price di tabel product_prices (channel online) untuk produk online\n` +
+      `✓ Buat entri baru di product_prices untuk produk offline\n\n` +
       `Lanjutkan?`;
 
     if (!window.confirm(confirmMessage)) return;
@@ -271,7 +303,7 @@ export function useGlobalOnlineMarkup() {
       setIsSubmitting(false);
       setProgress(0);
     }
-  }, [newPercentage, products, fetchProducts, validatePercentage]);
+  }, [newPercentage, products, fetchProducts, validatePercentage, selectionMode]);
 
   // ==========================================
   // 7. RESET & STATS
@@ -288,34 +320,31 @@ export function useGlobalOnlineMarkup() {
     if (products.length === 0) return null;
 
     const onlineProducts = products.filter(p => p.has_online_price);
-    if (onlineProducts.length === 0) {
-      return {
-        total_products: products.length,
-        online_products: 0,
-        avg_markup: 0,
-        min_markup: 0,
-        max_markup: 0,
-        will_change: 0,
-      };
-    }
+    const offlineProducts = products.filter(p => !p.has_online_price);
+
+    let selectedProducts = products;
+    if (selectionMode === 'online') selectedProducts = onlineProducts;
+    else if (selectionMode === 'offline') selectedProducts = offlineProducts;
 
     const markups = onlineProducts.map(p => p.current_markup_pct);
-    const avgMarkup = markups.reduce((a, b) => a + b, 0) / markups.length;
-    const minMarkup = Math.min(...markups);
-    const maxMarkup = Math.max(...markups);
+    const avgMarkup = markups.length > 0 ? markups.reduce((a, b) => a + b, 0) / markups.length : 0;
+    const minMarkup = markups.length > 0 ? Math.min(...markups) : 0;
+    const maxMarkup = markups.length > 0 ? Math.max(...markups) : 0;
     
     const pct = parseFloat(newPercentage) || 0;
-    const willChange = onlineProducts.filter(p => p.current_markup_pct !== pct).length;
+    const willChange = selectedProducts.filter(p => p.current_markup_pct !== pct).length;
 
     return {
       total_products: products.length,
       online_products: onlineProducts.length,
+      offline_products: offlineProducts.length,
+      selected_count: selectedProducts.length,
       avg_markup: avgMarkup.toFixed(1),
       min_markup: minMarkup,
       max_markup: maxMarkup,
       will_change: willChange,
     };
-  }, [products, newPercentage]);
+  }, [products, newPercentage, selectionMode]);
 
   const summaryStats = getSummaryStats();
 
@@ -325,12 +354,15 @@ export function useGlobalOnlineMarkup() {
     error,
     successMessage,
     newPercentage,
+    selectionMode,
     isSubmitting,
     progress,
     showPreview,
     previewData,
     summaryStats,
+    onlyAffectedCount: summaryStats?.selected_count || 0,
     handlePercentageChange,
+    handleSelectionChange,
     generatePreview,
     applyGlobalMarkup,
     resetForm,

@@ -28,7 +28,9 @@ export default function PersentaseOnlinePage() {
     error,
     successMessage,
     newPercentage,
+    selectionMode,
     handlePercentageChange,
+    handleSelectionChange,
     generatePreview,
     applyGlobalMarkup,
     resetForm,
@@ -57,13 +59,27 @@ export default function PersentaseOnlinePage() {
         </div>
 
         {/* Info Box */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
           <div className="flex gap-3">
             <FiInfo className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
             <p className="text-white text-sm leading-relaxed">
-              Ubah persentase markup untuk <strong>semua produk online</strong> sekaligus. 
-              Cocok untuk menyesuaikan harga saat ada perubahan biaya platform (Shopee, Grab, dll).
+              Ubah persentase markup untuk produk. Pilih target: <strong>Online</strong> (sudah aktif online), <strong>Offline</strong> (belum aktif), atau <strong>Semua</strong> sekaligus.
             </p>
+          </div>
+        </div>
+
+        {/* Feature Update Box */}
+        <div className="bg-gradient-to-r from-amber-400/20 to-orange-400/20 backdrop-blur-sm rounded-xl p-4 border border-amber-300/30">
+          <div className="flex gap-3">
+            <span className="text-2xl flex-shrink-0">✨</span>
+            <div className="text-white text-sm leading-relaxed">
+              <p className="font-semibold mb-2">Fitur Baru: Multi-Select Target Produk</p>
+              <ul className="space-y-1 text-xs opacity-90">
+                <li><strong>📱 Online:</strong> Ubah markup produk yang sudah aktif online (ada harga online)</li>
+                <li><strong>📦 Offline:</strong> Ubah markup produk belum online, akan dibuat harga online baru</li>
+                <li><strong>🎯 Semua:</strong> Ubah markup semua produk aktif sekaligus (online + offline)</li>
+              </ul>
+            </div>
           </div>
         </div>
       </header>
@@ -109,6 +125,10 @@ export default function PersentaseOnlinePage() {
                     <span className="text-xs text-gray-500 font-medium">Total Produk</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-800">{summaryStats.total_products}</p>
+                  <div className="flex gap-2 mt-2 text-xs">
+                    <span className="text-green-600">📱 {summaryStats.online_products} online</span>
+                    <span className="text-gray-500">📦 {summaryStats.offline_products} offline</span>
+                  </div>
                 </div>
 
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
@@ -117,6 +137,7 @@ export default function PersentaseOnlinePage() {
                     <span className="text-xs text-gray-500 font-medium">Rata-rata Markup</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-800">{summaryStats.avg_markup}%</p>
+                  <p className="text-xs text-gray-500 mt-1">dari produk online</p>
                 </div>
 
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
@@ -143,6 +164,29 @@ export default function PersentaseOnlinePage() {
                 <FiDollarSign className="w-5 h-5 text-blue-600" />
                 Atur Persentase Baru
               </h2>
+
+              {/* Selection Mode */}
+              <div className="mb-6">
+                <label className="block text-gray-700 text-sm font-semibold mb-2">
+                  Target Produk
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['online', 'offline', 'all'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleSelectionChange(mode)}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                        selectionMode === mode 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {mode === 'online' ? 'Online' : mode === 'offline' ? 'Offline' : 'Semua'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Percentage Input */}
               <div className="mb-4">
@@ -172,7 +216,7 @@ export default function PersentaseOnlinePage() {
               {newPercentage && summaryStats && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                   <p className="text-sm text-blue-800">
-                    <strong>{summaryStats.will_change}</strong> dari <strong>{summaryStats.total_products}</strong> produk akan terpengaruh.
+                    <strong>{summaryStats.will_change}</strong> dari <strong>{summaryStats.selected_count}</strong> produk {selectionMode} akan terpengaruh.
                   </p>
                 </div>
               )}
