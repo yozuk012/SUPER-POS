@@ -194,8 +194,6 @@ super-pos
 │   │   ├── seedCatalog.js
 │   │   ├── site.js
 │   │   └── supabase.js
-│   ├── scripts
-│   │   └── audit.js
 │   ├── seeds
 │   │   ├── images
 │   │   │   ├── air_mineral.jpg
