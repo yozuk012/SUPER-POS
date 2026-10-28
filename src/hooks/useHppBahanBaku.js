@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { convertToBaseQuantity } from '@/lib/rawMaterialUtils';
-import { getRecommendedPrice } from '@/lib/productUtils';
+import { getRecommendedPrice, getOnlinePrice } from '@/lib/productUtils';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
 
 const isMissingPurchaseMetadata = (error) => (
@@ -171,6 +171,50 @@ export default function useHppBahanBaku() {
           .eq('id', productId);
 
         if (updateError) throw new Error('Gagal memperbarui HPP produk: ' + updateError.message);
+
+        // === AUTO-UPDATE HARGA ONLINE ===
+        // Setelah base_price berubah, jika produk punya markup online, recalculate harga online
+        const { data: productData, error: fetchError } = await supabase
+          .from('products')
+          .select('online_markup_pct, product_prices(id, channel)')
+          .eq('id', productId)
+          .maybeSingle();
+
+        if (fetchError) throw new Error('Gagal mengambil data markup produk: ' + fetchError.message);
+
+        if (productData && productData.online_markup_pct > 0) {
+          // Produk punya markup online, hitung harga online baru
+          const newOnlinePrice = getOnlinePrice(safeBasePrice, productData.online_markup_pct);
+          const onlinePriceRecord = productData.product_prices?.find(pp => pp.channel === 'online');
+
+          if (onlinePriceRecord) {
+            // Update harga online yang sudah ada
+            const { error: updatePriceError } = await supabase
+              .from('product_prices')
+              .update({ price: newOnlinePrice })
+              .eq('id', onlinePriceRecord.id);
+
+            if (updatePriceError) {
+              console.error('Gagal update harga online:', updatePriceError);
+              // Jangan throw, biar HPP tetap tersimpan
+            }
+          } else {
+            // Buat harga online baru jika belum ada
+            const { error: insertPriceError } = await supabase
+              .from('product_prices')
+              .insert({
+                product_id: productId,
+                channel: 'online',
+                price: newOnlinePrice,
+                platform_fee_pct: 0,
+              });
+
+            if (insertPriceError) {
+              console.error('Gagal insert harga online:', insertPriceError);
+              // Jangan throw, biar HPP tetap tersimpan
+            }
+          }
+        }
       } else {
         // --- LOGIKA OTOMATISASI (SMART DEFAULTS) ---
         const cleanName = formData.namaProduk.replace(/\s+/g, '').toUpperCase();

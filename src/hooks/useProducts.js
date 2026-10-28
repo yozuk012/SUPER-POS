@@ -547,7 +547,12 @@ export function useProducts() {
         .eq('channel', 'online')
         .maybeSingle();
 
-      if (formData.is_online) {
+      // Tentukan apakah produk harus punya harga online:
+      // 1. User centang checkbox is_online (untuk tambah produk baru)
+      // 2. Produk sudah punya harga online DAN markup > 0 (untuk edit produk)
+      const shouldHaveOnlinePrice = formData.is_online || (existingOnlinePrice && onlineMarkupPct > 0);
+
+      if (shouldHaveOnlinePrice) {
         const onlinePrice = getOnlinePrice(basePrice, onlineMarkupPct);
         const onlinePricePayload = {
           product_id: productId,
