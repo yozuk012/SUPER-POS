@@ -56,7 +56,9 @@ export default function RecentSalesList({ sales }) {
         <span className="w-1.5 h-5 bg-gradient-to-b from-blue-600 to-blue-400 rounded-full" />
         Riwayat Penjualan Terakhir
       </h2>
-      <div className="overflow-x-auto rounded-lg border border-blue-200 shadow-sm">
+
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-blue-200 shadow-sm">
         <table className="min-w-full divide-y divide-blue-200 bg-white">
           <thead className="bg-gradient-to-r from-blue-100 to-blue-50">
             <tr>
@@ -79,6 +81,42 @@ export default function RecentSalesList({ sales }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* MOBILE CARD VIEW */}
+      <div className="md:hidden space-y-3">
+        {sales.map((sale) => (
+          <div
+            key={sale.id}
+            className="bg-white border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">No. Struk</p>
+                <p className="text-sm font-bold text-blue-700">#{sale.id}</p>
+              </div>
+              <div className="text-right">
+                {getStatusBadge(sale.qris_status || sale.payment_method)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal</p>
+                <p className="text-sm text-slate-600">{formatDate(sale.sale_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Channel</p>
+                <p className="text-sm text-slate-600 capitalize">{sale.channel}</p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-blue-100">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total</p>
+              <p className="text-lg font-bold text-slate-900">{formatIDR(sale.grand_total)}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

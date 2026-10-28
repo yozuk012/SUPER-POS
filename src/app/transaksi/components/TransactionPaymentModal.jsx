@@ -335,50 +335,32 @@ export default function TransactionPaymentModal({
                   lewat WhatsApp atau media sosial lain.
                 </p>
 
-                <button
-                  type="button"
-                  onClick={handleShareQris}
-                  disabled={isSharing}
-                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSharing ? (
-                    <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FiShare2 aria-hidden="true" className="h-4 w-4" />
-                  )}
-                  {isSharing ? 'Menyiapkan...' : 'Bagikan QRIS'}
-                </button>
-
                 <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href={buildWhatsAppShareUrl(getQrisShareText())}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-green-500 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-green-600"
+                  <button
+                    type="button"
+                    onClick={handleShareQris}
+                    disabled={isSharing}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <FaWhatsapp aria-hidden="true" className="h-4 w-4" />
-                    WhatsApp
-                  </a>
-                  <a
-                    href={buildTelegramShareUrl({ text: getQrisShareText(), url: storeQrisUrl || '' })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-sky-600"
-                  >
-                    <FaTelegramPlane aria-hidden="true" className="h-4 w-4" />
-                    Telegram
-                  </a>
+                    {isSharing ? (
+                      <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FiShare2 aria-hidden="true" className="h-4 w-4" />
+                    )}
+                    {isSharing ? 'Menyiapkan...' : 'Bagikan QRIS'}
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleCopyQrisDetails}
-                    className="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2.5 text-xs font-bold text-purple-700 transition-colors hover:bg-purple-50"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2.5 text-sm font-bold text-purple-700 transition-colors hover:bg-purple-50"
                   >
                     {shareCopied ? (
                       <FiCheck aria-hidden="true" className="h-4 w-4 text-green-600" />
                     ) : (
                       <FiClipboard aria-hidden="true" className="h-4 w-4" />
                     )}
-                    {shareCopied ? 'Rincian Tersalin' : 'Salin Rincian Tagihan'}
+                    {shareCopied ? 'Rincian Tersalin' : 'Salin Rincian'}
                   </button>
                 </div>
 
