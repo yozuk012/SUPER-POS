@@ -12,6 +12,8 @@ import ProductPagination from '@/app/product/components/ProductPagination';
 
 import { FiPlus } from 'react-icons/fi';
 
+import HPPSearch from './components/HPPSearch';
+
 const ITEMS_PER_PAGE = 10;
 
 export default function HPPProdukPage() {
@@ -22,6 +24,7 @@ export default function HPPProdukPage() {
   const [selectedKategori, setSelectedKategori] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const kategoriList = useMemo(() => {
     const uniqueKategori = [...new Set(products.map(p => p.kategori).filter(Boolean))];
@@ -29,9 +32,21 @@ export default function HPPProdukPage() {
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    if (!selectedKategori) return products;
-    return products.filter(item => item.kategori === selectedKategori);
-  }, [products, selectedKategori]);
+    let result = products;
+
+    if (selectedKategori) {
+      result = result.filter(item => item.kategori === selectedKategori);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter(item =>
+        item.namaProduk.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [products, selectedKategori, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const activePage = Math.min(currentPage, totalPages);
@@ -45,6 +60,11 @@ export default function HPPProdukPage() {
   // Ganti kategori selalu kembali ke halaman pertama.
   const handleKategoriChange = (value) => {
     setSelectedKategori(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
     setCurrentPage(1);
   };
 
@@ -114,16 +134,23 @@ export default function HPPProdukPage() {
         </div>
       </div>
 
-      {/* ═══ FILTER KATEGORI: card gradient tipis ═══ */}
+      {/* ═══ FILTER KATEGORI & SEARCH: card gradient tipis ═══ */}
       <div className="bg-gradient-to-br from-white via-blue-50 to-blue-100 p-3 rounded-xl shadow-sm border border-blue-200 mb-4">
-        <HPPHeader
-          onBack={() => router.back()}
-          selectedKategori={selectedKategori}
-          setSelectedKategori={handleKategoriChange}
-          kategoriList={kategoriList}
-          isDropdownOpen={isDropdownOpen}
-          setIsDropdownOpen={setIsDropdownOpen}
-        />
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="flex-1">
+            <HPPSearch value={searchQuery} onChange={handleSearchChange} />
+          </div>
+          <div className="flex-1">
+            <HPPHeader
+              onBack={() => router.back()}
+              selectedKategori={selectedKategori}
+              setSelectedKategori={handleKategoriChange}
+              kategoriList={kategoriList}
+              isDropdownOpen={isDropdownOpen}
+              setIsDropdownOpen={setIsDropdownOpen}
+            />
+          </div>
+        </div>
       </div>
 
       {/* ═══ KONTEN UTAMA ═══ */}

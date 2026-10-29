@@ -57,7 +57,8 @@ super-pos
 │   │   │   └── hppproduk
 │   │   │       ├── components
 │   │   │       │   ├── HPPHeader.jsx
-│   │   │       │   └── HPPProductList.jsx
+│   │   │       │   ├── HPPProductList.jsx
+│   │   │       │   └── HPPSearch.jsx
 │   │   │       └── page.js
 │   │   ├── offline
 │   │   │   ├── OfflineActions.jsx
