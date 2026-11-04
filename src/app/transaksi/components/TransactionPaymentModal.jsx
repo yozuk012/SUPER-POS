@@ -117,6 +117,10 @@ export default function TransactionPaymentModal({
     try {
       const result = await shareQris({
         url: storeQrisUrl,
+        storeName: storeInfo?.name,
+        amount: grandTotal,
+        customerName,
+        referenceNumber,
         fileName: buildQrisFileName(storeInfo?.name),
         title: `Pembayaran QRIS ${formatRupiah(grandTotal)}`,
         text: getQrisShareText(),
