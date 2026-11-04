@@ -11,6 +11,7 @@ import {
   FiClipboard,
   FiCreditCard,
   FiDollarSign,
+  FiDownload,
   FiImage,
   FiInfo,
   FiLoader,
@@ -18,14 +19,15 @@ import {
   FiSmartphone,
   FiX
 } from 'react-icons/fi';
-import { FaTelegramPlane, FaWhatsapp } from 'react-icons/fa';
 import { parseNumberUI } from '@/lib/productUtils';
 import {
   buildQrisFileName,
+  buildQrisReferenceNumber,
   buildQrisShareText,
-  buildTelegramShareUrl,
-  buildWhatsAppShareUrl,
   copyTextToClipboard,
+  downloadQrisPaymentCard,
+  generateQrisPaymentCardFile,
+  isQrisFileShareSupported,
   shareQris,
 } from '@/lib/qrisShare';
 
@@ -46,17 +48,22 @@ export default function TransactionPaymentModal({
   const [qrisConfirmed, setQrisConfirmed] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  // State fitur bagikan QRIS (WhatsApp / media sosial / salin rincian)
+  // State fitur bagikan QRIS sebagai gambar (WhatsApp / media sosial)
   const [shareFeedback, setShareFeedback] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  // Pratinjau kartu QRIS (gambar yang akan dikirim ke pelanggan)
+  const [preview, setPreview] = useState({ key: '', url: '', file: null });
+  const [isFileShareSupported] = useState(() => isQrisFileShareSupported());
 
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- disengaja: reset state form setiap modal dibuka
       setPaymentMethod('cash');
       setCashReceived(0);
-      setReferenceNumber('');
+      // Nomor transaksi dibuat sejak awal supaya sudah tercetak di gambar
+      // QRIS yang dibagikan ke pelanggan (tidak lagi tampil "-").
+      setReferenceNumber(buildQrisReferenceNumber());
       setIsProcessing(false);
       setQrisConfirmed(false);
       setImageError(false);
@@ -64,8 +71,50 @@ export default function TransactionPaymentModal({
       setShareFeedback(null);
       setIsSharing(false);
       setShareCopied(false);
+      setPreview({ key: '', url: '', file: null });
     }
   }, [isOpen]);
+
+  // Kunci pratinjau: kartu digambar ulang setiap isi transaksi berubah.
+  const previewKey = [
+    storeQrisUrl,
+    grandTotal,
+    referenceNumber,
+    customerName,
+    storeInfo?.name,
+  ].join('|');
+
+  // Pratinjau gambar kartu QRIS yang nanti dibagikan ke pelanggan.
+  useEffect(() => {
+    if (!isOpen || paymentMethod !== 'qris' || !storeQrisUrl || !referenceNumber || !(grandTotal > 0)) {
+      return undefined;
+    }
+
+    let active = true;
+    let objectUrl = '';
+
+    generateQrisPaymentCardFile({
+      url: storeQrisUrl,
+      storeName: storeInfo?.name,
+      amount: grandTotal,
+      customerName,
+      referenceNumber,
+      fileName: buildQrisFileName(storeInfo?.name, referenceNumber),
+    }).then((file) => {
+      if (!active || !file) return;
+      objectUrl = URL.createObjectURL(file);
+      setPreview({ key: previewKey, url: objectUrl, file });
+    });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isOpen, paymentMethod, previewKey, storeQrisUrl, grandTotal, customerName, referenceNumber, storeInfo?.name]);
+
+  const previewUrl = preview.key === previewKey ? preview.url : '';
+  // File kartu yang sudah siap dipakai ulang saat tombol bagikan ditekan.
+  const previewCardFile = preview.key === previewKey ? preview.file : null;
 
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -96,60 +145,91 @@ export default function TransactionPaymentModal({
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  // ── Bagikan QRIS + nominal tagihan (WhatsApp / media sosial) ────────────
+  // ── Bagikan QRIS sebagai GAMBAR (QRIS + nominal + nomor transaksi) ──────
+  const canShareQrisImage = Boolean(storeQrisUrl) && grandTotal > 0;
+
   const getQrisShareText = () =>
     buildQrisShareText({
       storeName: storeInfo?.name,
       amount: grandTotal,
       customerName,
       referenceNumber,
-      qrisUrl: storeQrisUrl,
-      channel,
     });
 
-  const showShareFeedback = (message) => {
-    setShareFeedback(message);
-    setTimeout(() => setShareFeedback(null), 5000);
+  const getQrisCardPayload = () => ({
+    url: storeQrisUrl,
+    storeName: storeInfo?.name,
+    amount: grandTotal,
+    customerName,
+    referenceNumber,
+    date: new Date(),
+    fileName: buildQrisFileName(storeInfo?.name, referenceNumber),
+  });
+
+  const showShareFeedback = (tone, message) => {
+    setShareFeedback({ tone, message });
+    setTimeout(() => setShareFeedback(null), 6000);
   };
 
   const handleShareQris = async () => {
+    if (!canShareQrisImage || isSharing) return;
+
     setIsSharing(true);
     try {
       const result = await shareQris({
-        url: storeQrisUrl,
-        storeName: storeInfo?.name,
-        amount: grandTotal,
-        customerName,
-        referenceNumber,
-        fileName: buildQrisFileName(storeInfo?.name),
+        ...getQrisCardPayload(),
+        cardFile: previewCardFile,
         title: `Pembayaran QRIS ${formatRupiah(grandTotal)}`,
         text: getQrisShareText(),
       });
 
-      if (result.status === 'fallback') {
+      if (result.status === 'shared') {
+        showShareFeedback('success', 'Gambar QRIS (nominal + nomor transaksi) berhasil dibagikan.');
+      } else if (result.status === 'fallback') {
         const langkah = [];
-        if (result.downloaded) langkah.push('gambar QRIS sudah diunduh');
-        if (result.copied) langkah.push('rincian tagihan sudah disalin');
+        if (result.downloaded) langkah.push('gambar QRIS diunduh');
+        if (result.copied) langkah.push('caption tagihan disalin');
 
         showShareFeedback(
+          'info',
           langkah.length > 0
-            ? `Browser ini belum punya menu bagikan langsung — ${langkah.join(' dan ')}, tinggal tempel di WhatsApp/media sosial.`
-            : 'Browser ini belum mendukung bagikan langsung. Gunakan tombol WhatsApp atau Salin Rincian Tagihan.'
+            ? `Perangkat ini belum punya menu bagikan gambar langsung — ${langkah.join(' dan ')}. Tinggal lampirkan gambarnya di WhatsApp/media sosial.`
+            : 'Gunakan tombol Unduh Gambar, lalu lampirkan gambarnya di WhatsApp/media sosial.'
         );
       } else if (result.status === 'failed') {
-        showShareFeedback('Gagal membagikan QRIS. Coba tombol WhatsApp atau Salin Rincian.');
+        showShareFeedback('error', 'Gagal membagikan gambar QRIS. Coba tombol Unduh Gambar.');
       }
     } finally {
       setIsSharing(false);
     }
   };
 
+  const handleDownloadQrisCard = async () => {
+    if (!canShareQrisImage) return;
+
+    const downloaded = await downloadQrisPaymentCard(getQrisCardPayload());
+
+    showShareFeedback(
+      downloaded ? 'success' : 'error',
+      downloaded
+        ? 'Gambar QRIS berhasil diunduh. Lampirkan gambar tersebut di WhatsApp/media sosial.'
+        : 'Gagal mengunduh gambar QRIS. Periksa koneksi lalu coba lagi.'
+    );
+  };
+
   const handleCopyQrisDetails = async () => {
     const copied = await copyTextToClipboard(getQrisShareText());
     setShareCopied(copied);
-    if (!copied) showShareFeedback('Gagal menyalin rincian tagihan.');
+    if (!copied) showShareFeedback('error', 'Gagal menyalin rincian tagihan.');
     setTimeout(() => setShareCopied(false), 2000);
   };
+
+  const shareFeedbackClass =
+    shareFeedback?.tone === 'success'
+      ? 'border-green-200 bg-green-50 text-green-700'
+      : shareFeedback?.tone === 'error'
+        ? 'border-red-200 bg-red-50 text-red-700'
+        : 'border-blue-200 bg-blue-50 text-blue-700';
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -296,38 +376,60 @@ export default function TransactionPaymentModal({
           {/* QRIS */}
           {paymentMethod === 'qris' && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-5 text-center">
-                <h3 className="text-sm font-bold text-purple-800 mb-4">Scan QRIS untuk Pembayaran</h3>
+              <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-4 text-center">
+                <h3 className="mb-3 flex items-center justify-center gap-2 text-sm font-bold text-purple-800">
+                  <FiSmartphone aria-hidden="true" className="h-4 w-4" />
+                  Scan QRIS untuk Pembayaran
+                </h3>
 
                 {storeQrisUrl && !imageError ? (
-                  <div className="bg-white p-3 rounded-xl inline-block shadow-sm border border-purple-200">
+                  <div className="inline-block rounded-xl border border-purple-200 bg-white p-3 shadow-sm">
                     <img
                       src={storeQrisUrl}
                       alt="QRIS Code"
-                      className="w-48 h-48 object-contain mx-auto"
+                      className="h-44 w-44 object-contain"
                       onError={() => setImageError(true)}
                     />
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border-2 border-dashed border-blue-300 w-48 h-48 rounded-xl flex flex-col items-center justify-center mx-auto p-4">
-                    <FiImage aria-hidden="true" className="w-10 h-10 text-blue-400 mb-2" />
-                    <p className="text-xs text-slate-500 font-medium text-center">
-                      {imageError ? 'Gagal memuat QRIS.<br/>Periksa URL di Database.' : 'QRIS belum diatur.<br/>Hubungi admin.'}
+                  <div className="mx-auto flex h-44 w-44 flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-4">
+                    <FiImage aria-hidden="true" className="mb-2 h-10 w-10 text-blue-400" />
+                    <p className="text-center text-xs font-medium text-slate-500">
+                      {imageError
+                        ? 'Gagal memuat QRIS. Periksa URL di Database.'
+                        : 'QRIS belum diatur. Hubungi admin.'}
                     </p>
                   </div>
                 )}
 
-                <p className="text-xs text-purple-600 mt-4 font-semibold">
+                <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-purple-200 bg-white p-3 text-left">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      Jumlah Pembelian
+                    </p>
+                    <p className="text-base font-extrabold text-slate-900">{formatRupiah(grandTotal)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      No. Transaksi
+                    </p>
+                    <p className="break-all font-mono text-xs font-bold text-purple-700">
+                      {referenceNumber || '-'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs font-semibold text-purple-600">
                   Pastikan nominal di aplikasi e-wallet pelanggan sesuai.
                 </p>
               </div>
 
-              {/* Bagikan QRIS + nominal tagihan ke WhatsApp / media sosial */}
-              <div className="space-y-2 rounded-xl border-2 border-dashed border-purple-300 bg-white p-3">
+              {/* Bagikan QRIS sebagai GAMBAR (bukan link) */}
+              <div className="space-y-3 rounded-xl border-2 border-dashed border-purple-300 bg-white p-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="flex items-center gap-1.5 text-xs font-bold text-purple-800">
                     <FiShare2 aria-hidden="true" className="h-4 w-4" />
-                    Bagikan QRIS & nominal tagihan
+                    Bagikan Gambar QRIS
                   </p>
                   <span className="whitespace-nowrap rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">
                     {formatRupiah(grandTotal)}
@@ -335,29 +437,65 @@ export default function TransactionPaymentModal({
                 </div>
 
                 <p className="text-[11px] leading-snug text-slate-500">
-                  Kirim gambar QRIS beserta harga yang harus dibayar ke pelanggan
-                  lewat WhatsApp atau media sosial lain.
+                  Pelanggan menerima <span className="font-bold text-slate-700">gambar QRIS</span> berisi
+                  jumlah pembelian <span className="font-bold text-slate-700">{formatRupiah(grandTotal)}</span> dan
+                  nomor transaksi <span className="font-bold text-slate-700">{referenceNumber || '-'}</span> —
+                  bukan berupa link.
                 </p>
+
+                {previewUrl ? (
+                  <div className="rounded-lg border border-purple-200 bg-slate-50 p-2">
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      Pratinjau gambar yang dikirim
+                    </p>
+                    <img
+                      src={previewUrl}
+                      alt="Pratinjau kartu pembayaran QRIS"
+                      className="mx-auto max-h-64 w-auto rounded-md border border-slate-200 object-contain"
+                    />
+                  </div>
+                ) : canShareQrisImage ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-6 text-[11px] font-semibold text-slate-500">
+                    <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
+                    Menyiapkan pratinjau gambar...
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-medium leading-snug text-amber-700">
+                    {storeQrisUrl
+                      ? 'Jumlah pembelian masih Rp 0. Tambahkan produk ke keranjang sebelum membagikan QRIS.'
+                      : 'Gambar QRIS toko belum diatur. Lengkapi di Pengaturan Toko terlebih dahulu.'}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleShareQris}
+                  disabled={!canShareQrisImage || isSharing}
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSharing ? (
+                    <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FiShare2 aria-hidden="true" className="h-4 w-4" />
+                  )}
+                  {isSharing ? 'Menyiapkan gambar...' : 'Bagikan Gambar QRIS'}
+                </button>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={handleShareQris}
-                    disabled={isSharing}
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleDownloadQrisCard}
+                    disabled={!canShareQrisImage || isSharing}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-2 py-2.5 text-[11px] font-bold text-purple-700 transition-colors hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSharing ? (
-                      <FiLoader aria-hidden="true" className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FiShare2 aria-hidden="true" className="h-4 w-4" />
-                    )}
-                    {isSharing ? 'Menyiapkan...' : 'Bagikan QRIS'}
+                    <FiDownload aria-hidden="true" className="h-4 w-4" />
+                    Unduh Gambar
                   </button>
 
                   <button
                     type="button"
                     onClick={handleCopyQrisDetails}
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2.5 text-sm font-bold text-purple-700 transition-colors hover:bg-purple-50"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-2 py-2.5 text-[11px] font-bold text-purple-700 transition-colors hover:bg-purple-50"
                   >
                     {shareCopied ? (
                       <FiCheck aria-hidden="true" className="h-4 w-4 text-green-600" />
@@ -369,17 +507,25 @@ export default function TransactionPaymentModal({
                 </div>
 
                 {shareFeedback && (
-                  <p className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-blue-700">
-                    {shareFeedback}
+                  <p className={`rounded-lg border px-2.5 py-2 text-[11px] font-medium leading-snug ${shareFeedbackClass}`}>
+                    {shareFeedback.message}
                   </p>
                 )}
+
+                <p className="text-[10px] leading-snug text-slate-400">
+                  {isFileShareSupported
+                    ? 'Tombol bagikan mengirim file gambar langsung ke WhatsApp, Telegram, dan media sosial lain.'
+                    : 'Perangkat ini belum bisa membagikan file gambar langsung — gunakan Unduh Gambar lalu lampirkan di WhatsApp/media sosial.'}
+                </p>
               </div>
 
               <div className="space-y-2">
                 <button
                   onClick={() => {
                     setQrisConfirmed(true);
-                    setReferenceNumber('QRIS-' + Date.now().toString().slice(-6));
+                    // Nomor transaksi sudah dibuat saat modal dibuka; pastikan
+                    // tetap ada agar gambar QRIS & data transaksi konsisten.
+                    if (!referenceNumber) setReferenceNumber(buildQrisReferenceNumber());
                   }}
                   className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                     qrisConfirmed

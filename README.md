@@ -120,10 +120,11 @@ maupun perangkat mobile.
 - Tiga metode pembayaran:
   - **Tunai** — input uang diterima dan hitung kembalian.
   - **Transfer bank** — konfirmasi manual setelah dana masuk.
-  - **QRIS/E-Wallet** — tampilkan QRIS toko, **bagikan QRIS beserta nominal
-    tagihan ke WhatsApp, Telegram, atau media sosial lain** (tombol bagikan
-    bawaan perangkat, tautan WhatsApp/Telegram, dan salin rincian tagihan),
-    lalu konfirmasi manual.
+  - **QRIS/E-Wallet** — tampilkan QRIS toko, lalu bagikan **gambar kartu QRIS**
+    (berisi QRIS, jumlah pembelian, dan nomor transaksi — bukan link) ke
+    WhatsApp, Telegram, atau media sosial lain lewat tombol bagikan perangkat,
+    lengkap dengan tombol **Unduh Gambar** dan **Salin Rincian** sebagai
+    cadangan, lalu konfirmasi manual.
 - Stok produk otomatis berkurang setelah pembayaran berhasil — kecuali produk
   dengan **stok tanpa batas (unlimited)** yang stoknya memang tidak dilacak.
 - Struk dapat dicetak melalui dialog print browser atau printer thermal Bluetooth.
