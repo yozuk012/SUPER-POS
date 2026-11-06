@@ -7,6 +7,12 @@ import bcrypt from 'bcryptjs';
 export function useForgotPassword() {
   const [step, setStep] = useState('pin');
   const [pin, setPin] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetFullName, setResetFullName] = useState('');
+  const [resetPin, setResetPin] = useState('');
+  const [confirmResetPin, setConfirmResetPin] = useState('');
+  const [supportCode, setSupportCode] = useState('');
+  const [showPinReset, setShowPinReset] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
@@ -33,11 +39,112 @@ export function useForgotPassword() {
   };
 
   const passwordStrength = getPasswordStrength(newPassword);
+  const supportResetEnabled = process.env.NEXT_PUBLIC_ENABLE_PIN_SUPPORT_RESET === 'true';
 
   const handlePinChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPin(value);
     setError(null);
+  };
+
+  const handleResetPinChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setResetPin(value);
+    setError(null);
+  };
+
+  const handleResetEmailChange = (e) => {
+    setResetEmail(e.target.value);
+    setError(null);
+  };
+
+  const handleResetFullNameChange = (e) => {
+    setResetFullName(e.target.value);
+    setError(null);
+  };
+
+  const handleConfirmResetPinChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setConfirmResetPin(value);
+    setError(null);
+  };
+
+  const handleSupportCodeChange = (e) => {
+    setSupportCode(e.target.value);
+    setError(null);
+  };
+
+  const validateNewPin = () => {
+    if (resetPin.length !== 6) throw new Error('PIN baru harus 6 digit angka');
+    if (resetPin !== confirmResetPin) throw new Error('Konfirmasi PIN tidak cocok');
+
+    const simplePins = ['123456', '654321', '111111', '000000', '121212', '696969'];
+    if (simplePins.includes(resetPin)) {
+      throw new Error('PIN terlalu mudah ditebak. Gunakan kombinasi angka yang lebih aman.');
+    }
+  };
+
+  const handleSelfResetPin = async (e) => {
+    if (e) e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      validateNewPin();
+
+      if (!resetEmail.trim()) throw new Error('Email wajib diisi');
+      if (!resetFullName.trim()) throw new Error('Nama lengkap wajib diisi');
+      const response = await fetch('/api/reset-recovery-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'self', email: resetEmail.trim(), fullName: resetFullName.trim(), pin: resetPin, confirmPin: confirmResetPin }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Reset PIN mandiri gagal');
+
+      setResetPin('');
+      setConfirmResetPin('');
+      setResetEmail('');
+      setResetFullName('');
+      setShowPinReset(false);
+      alert('✅ PIN pemulihan berhasil diubah. Simpan PIN baru Anda di tempat aman.');
+    } catch (err) {
+      console.warn('Self reset PIN warning:', err.message);
+      setError(err.message || 'Terjadi kesalahan saat mereset PIN');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSupportResetPin = async (e) => {
+    if (e) e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      if (!supportResetEnabled) throw new Error('Reset PIN oleh developer/CS sedang dinonaktifkan.');
+      if (!supportCode.trim()) throw new Error('Kode reset developer/CS wajib diisi');
+      validateNewPin();
+
+      const response = await fetch('/api/reset-recovery-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'support', code: supportCode.trim(), email: resetEmail.trim(), fullName: resetFullName.trim(), pin: resetPin, confirmPin: confirmResetPin }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Reset PIN oleh developer/CS gagal');
+
+      setResetPin('');
+      setConfirmResetPin('');
+      setSupportCode('');
+      setShowPinReset(false);
+      alert('✅ PIN pemulihan berhasil direset oleh developer/CS.');
+    } catch (err) {
+      console.warn('Support reset PIN warning:', err.message);
+      setError(err.message || 'Terjadi kesalahan saat mereset PIN');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ==========================================
@@ -197,6 +304,12 @@ export function useForgotPassword() {
     setConfirmPassword('');
     setError(null);
     setMerchantData(null);
+    setResetEmail('');
+    setResetFullName('');
+    setResetPin('');
+    setConfirmResetPin('');
+    setSupportCode('');
+    setShowPinReset(false);
   };
 
   const goBackToPin = () => {
@@ -214,8 +327,23 @@ export function useForgotPassword() {
     error,
     isLoading,
     passwordStrength,
+    resetEmail,
+    resetFullName,
+    resetPin,
+    confirmResetPin,
+    supportCode,
+    showPinReset,
+    supportResetEnabled,
+    setShowPinReset,
     handlePinChange,
+    handleResetEmailChange,
+    handleResetFullNameChange,
+    handleResetPinChange,
+    handleConfirmResetPinChange,
+    handleSupportCodeChange,
     handleVerifyPin,
+    handleSelfResetPin,
+    handleSupportResetPin,
     handlePasswordChange,
     handleUpdatePassword,
     resetForm,

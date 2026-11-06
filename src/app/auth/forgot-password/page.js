@@ -14,8 +14,23 @@ export default function ForgotPasswordPage() {
     error,
     isLoading,
     passwordStrength,
+    resetEmail,
+    resetFullName,
+    resetPin,
+    confirmResetPin,
+    supportCode,
+    showPinReset,
+    supportResetEnabled,
+    setShowPinReset,
     handlePinChange,
+    handleResetEmailChange,
+    handleResetFullNameChange,
+    handleResetPinChange,
+    handleConfirmResetPinChange,
+    handleSupportCodeChange,
     handleVerifyPin,
+    handleSelfResetPin,
+    handleSupportResetPin,
     handlePasswordChange,
     handleUpdatePassword,
     resetForm,
@@ -77,6 +92,104 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowPinReset(!showPinReset)}
+            className="w-full flex items-center justify-between gap-3 bg-white/15 hover:bg-white/20 text-white font-semibold px-4 py-3 rounded-xl transition-colors text-left"
+            disabled={isLoading}
+          >
+            <span className="flex items-center gap-3">
+              <FiKey className="w-5 h-5 flex-shrink-0" />
+              <span>{showPinReset ? 'Tutup opsi reset PIN' : 'Tidak mengerti cara reset PIN?'}</span>
+            </span>
+            <span aria-hidden="true">{showPinReset ? '−' : '+'}</span>
+          </button>
+
+          {showPinReset && (
+            <div className="space-y-4 rounded-xl bg-white/10 p-4">
+              <p className="text-white/90 text-sm leading-relaxed">
+                Masukkan email dan nama lengkap yang sama persis dengan data pendaftaran. Reset hanya disetujui jika keduanya cocok.
+              </p>
+
+              <div className="space-y-3">
+                <p className="text-white text-sm font-bold">RESET MANDIRI</p>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={handleResetEmailChange}
+                  placeholder="Email akun Anda"
+                  className="w-full px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-60"
+                  disabled={isLoading}
+                  autoComplete="email"
+                />
+                <input
+                  type="text"
+                  value={resetFullName}
+                  onChange={handleResetFullNameChange}
+                  placeholder="Nama lengkap sesuai akun"
+                  className="w-full px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-60"
+                  disabled={isLoading}
+                  autoComplete="name"
+                />
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={resetPin}
+                  onChange={handleResetPinChange}
+                  placeholder="PIN baru 6 digit"
+                  maxLength={6}
+                  className="w-full text-center text-xl tracking-[0.6em] px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 font-mono disabled:opacity-60"
+                  disabled={isLoading}
+                  autoComplete="new-password"
+                />
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={confirmResetPin}
+                  onChange={handleConfirmResetPinChange}
+                  placeholder="Ulangi PIN baru"
+                  maxLength={6}
+                  className="w-full text-center text-xl tracking-[0.6em] px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 font-mono disabled:opacity-60"
+                  disabled={isLoading}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={handleSelfResetPin}
+                  disabled={isLoading || !resetEmail.trim() || !resetFullName.trim() || resetPin.length !== 6 || resetPin !== confirmResetPin}
+                  className="w-full bg-white/90 text-blue-700 font-bold py-3 px-4 rounded-xl hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reset PIN Saya
+                </button>
+              </div>
+
+              {supportResetEnabled && (
+                <div className="space-y-3 border-t border-white/20 pt-4">
+                  <p className="text-white text-sm font-bold">RESET DEVELOPER / CS</p>
+                  <input
+                    type="password"
+                    value={supportCode}
+                    onChange={handleSupportCodeChange}
+                    placeholder="Kode resmi developer/CS"
+                    className="w-full px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-60"
+                    disabled={isLoading}
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSupportResetPin}
+                    disabled={isLoading || !supportCode.trim() || !resetEmail.trim() || !resetFullName.trim() || resetPin.length !== 6 || resetPin !== confirmResetPin}
+                    className="w-full border border-white/70 text-white font-bold py-3 px-4 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Reset dengan Bantuan Developer / CS
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* PIN Input */}
           <div>

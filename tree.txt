@@ -12,6 +12,8 @@ super-pos
 ├── src
 │   ├── app
 │   │   ├── api
+│   │   │   ├── reset-recovery-pin
+│   │   │   │   └── route.js
 │   │   │   └── seed-images
 │   │   │       └── [filename]
 │   │   │           └── route.js
