@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import bcrypt from 'bcryptjs';
 
 export function useForgotPassword() {
   const [step, setStep] = useState('pin');
@@ -17,7 +15,6 @@ export function useForgotPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [merchantData, setMerchantData] = useState(null);
 
   // Password strength indicator
   const getPasswordStrength = (password) => {
@@ -104,7 +101,6 @@ export function useForgotPassword() {
 
       setResetPin('');
       setConfirmResetPin('');
-      setResetEmail('');
       setResetFullName('');
       setShowPinReset(false);
       alert('✅ PIN pemulihan berhasil diubah. Simpan PIN baru Anda di tempat aman.');
@@ -159,94 +155,18 @@ export function useForgotPassword() {
       if (pin.length !== 6) {
         throw new Error('PIN harus 6 digit angka');
       }
+      if (!resetEmail.trim()) throw new Error('Email akun wajib diisi');
 
-      const { data: merchant, error: fetchError } = await supabase
-        .from('merchants')
-        .select('id, recovery_pin_hash, pin_attempts, pin_locked_until')
-        .limit(1)
-        .maybeSingle();
+      const response = await fetch('/api/reset-password-with-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'verify', email: resetEmail.trim(), pin }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Verifikasi PIN gagal');
 
-      if (fetchError) throw new Error('Gagal mengambil data: ' + fetchError.message);
-      if (!merchant) throw new Error('Data merchant tidak ditemukan');
-
-      if (!merchant.recovery_pin_hash) {
-        throw new Error('PIN pemulihan belum diatur. Silakan hubungi CS untuk bantuan.');
-      }
-
-      // Cek lock
-      if (merchant.pin_locked_until) {
-        const lockTime = new Date(merchant.pin_locked_until);
-        const now = new Date();
-        
-        if (lockTime > now) {
-          const remainingMinutes = Math.ceil((lockTime - now) / 60000);
-          const lockMessage = `PIN terkunci karena terlalu banyak percobaan gagal.\n\nCoba lagi dalam ${remainingMinutes} menit atau hubungi CS via WhatsApp.`;
-          
-          // Tampilkan ALERT POPUP untuk user
-          alert('🔒 ' + lockMessage);
-          throw new Error(lockMessage);
-        } else {
-          await supabase
-            .from('merchants')
-            .update({ pin_attempts: 0, pin_locked_until: null })
-            .eq('id', merchant.id);
-        }
-      }
-
-      // Verifikasi PIN
-      const isPinValid = await bcrypt.compare(pin, merchant.recovery_pin_hash);
-
-      if (!isPinValid) {
-        const currentAttempts = merchant.pin_attempts || 0;
-        const newAttempts = currentAttempts + 1;
-
-        if (newAttempts >= 3) {
-          const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-          
-          await supabase
-            .from('merchants')
-            .update({ 
-              pin_attempts: newAttempts, 
-              pin_locked_until: lockUntil.toISOString() 
-            })
-            .eq('id', merchant.id);
-
-          const lockMessage = 
-            `PIN yang Anda masukkan salah!\n\n` +
-            `Anda telah mencoba 3 kali.\n` +
-            `Akun dikunci selama 15 menit untuk keamanan.\n\n` +
-            `Silakan hubungi CS via WhatsApp untuk bantuan.`;
-          
-          // Tampilkan ALERT POPUP
-          alert('❌ ' + lockMessage);
-          throw new Error(lockMessage);
-        }
-
-        await supabase
-          .from('merchants')
-          .update({ pin_attempts: newAttempts })
-          .eq('id', merchant.id);
-
-        const remainingAttempts = 3 - newAttempts;
-        const errorMessage = `PIN yang Anda masukkan salah.\n\nSisa percobaan: ${remainingAttempts} kali.`;
-        
-        // Tampilkan ALERT POPUP untuk error PIN salah
-        alert('⚠️ ' + errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      // PIN BENAR!
-      await supabase
-        .from('merchants')
-        .update({ pin_attempts: 0, pin_locked_until: null })
-        .eq('id', merchant.id);
-
-      setMerchantData(merchant);
       setStep('newPassword');
-      setPin('');
-      
-      // Feedback sukses
-      alert('✅ PIN berhasil diverifikasi!\n\nSilakan buat password baru Anda.');
+      alert('PIN berhasil diverifikasi!\n\nSilakan buat password baru Anda.');
 
     } catch (err) {
       // Gunakan console.warn (bukan console.error) agar tidak muncul merah di console
@@ -279,11 +199,18 @@ export function useForgotPassword() {
         throw new Error('Password terlalu mudah ditebak. Gunakan kombinasi yang lebih kuat.');
       }
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword
+      const response = await fetch('/api/reset-password-with-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'update',
+          email: resetEmail.trim(),
+          pin,
+          password: newPassword,
+        }),
       });
-
-      if (updateError) throw new Error('Gagal update password: ' + updateError.message);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Gagal update password');
 
       setStep('success');
 
@@ -303,7 +230,6 @@ export function useForgotPassword() {
     setNewPassword('');
     setConfirmPassword('');
     setError(null);
-    setMerchantData(null);
     setResetEmail('');
     setResetFullName('');
     setResetPin('');

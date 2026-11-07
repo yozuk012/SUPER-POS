@@ -115,15 +115,6 @@ export default function ForgotPasswordPage() {
               <div className="space-y-3">
                 <p className="text-white text-sm font-bold">RESET MANDIRI</p>
                 <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={handleResetEmailChange}
-                  placeholder="Email akun Anda"
-                  className="w-full px-4 py-3 rounded-xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-60"
-                  disabled={isLoading}
-                  autoComplete="email"
-                />
-                <input
                   type="text"
                   value={resetFullName}
                   onChange={handleResetFullNameChange}
@@ -192,6 +183,22 @@ export default function ForgotPasswordPage() {
           )}
 
           {/* PIN Input */}
+          <div>
+            <label className="block text-white text-sm font-bold mb-2 tracking-wide">
+              EMAIL AKUN
+            </label>
+            <input
+              type="email"
+              value={resetEmail}
+              onChange={handleResetEmailChange}
+              placeholder="nama@email.com"
+              className="w-full px-4 py-4 rounded-2xl border-0 bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-white/50 shadow-lg disabled:opacity-60"
+              required
+              disabled={isLoading}
+              autoComplete="email"
+            />
+          </div>
+
           <div>
             <label className="block text-white text-sm font-bold mb-2 tracking-wide">
               PIN PEMULIHAN (6 DIGIT)
