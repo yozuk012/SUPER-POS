@@ -15,6 +15,42 @@ const removeMainStoreSuffix = (storeName) =>
 // ==========================================
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9+\-\s()]{8,16}$/;
+const SAFE_TEXT_REGEX = /^[^<>]*$/;
+const CONTROL_CHAR_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_PASSWORD_LENGTH = 256;
+
+const getSafeTextError = (value, label) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return null;
+  if (trimmedValue.length > MAX_NAME_LENGTH) {
+    return `${label} maksimal ${MAX_NAME_LENGTH} karakter`;
+  }
+  if (!SAFE_TEXT_REGEX.test(trimmedValue) || CONTROL_CHAR_REGEX.test(trimmedValue)) {
+    return `${label} mengandung karakter yang tidak diizinkan`;
+  }
+  return null;
+};
+
+const getEmailError = (value) => {
+  const email = value.trim();
+  if (!email) return 'Email wajib diisi';
+  if (email.length > MAX_EMAIL_LENGTH) return `Email maksimal ${MAX_EMAIL_LENGTH} karakter`;
+  if (!EMAIL_REGEX.test(email) || CONTROL_CHAR_REGEX.test(email)) {
+    return 'Format email tidak valid (contoh: nama@domain.com)';
+  }
+  return null;
+};
+
+const getPasswordError = (value) => {
+  if (!value) return 'Password wajib diisi';
+  if (value.length > MAX_PASSWORD_LENGTH) {
+    return `Password maksimal ${MAX_PASSWORD_LENGTH} karakter`;
+  }
+  if (CONTROL_CHAR_REGEX.test(value)) return 'Password mengandung karakter yang tidak diizinkan';
+  return null;
+};
 
 export function useAuth() {
   const router = useRouter();
@@ -66,9 +102,14 @@ export function useAuth() {
   const regFieldErrors = useMemo(() => {
     const errors = {};
 
-    // Email — hanya cek format kalau sudah ada isinya
-    if (regFormData.email && !EMAIL_REGEX.test(regFormData.email.trim())) {
-      errors.email = 'Format email tidak valid (contoh: nama@domain.com)';
+    const fullNameError = getSafeTextError(regFormData.fullName, 'Nama lengkap');
+    const storeNameError = getSafeTextError(regFormData.storeName, 'Nama toko');
+    if (fullNameError) errors.fullName = fullNameError;
+    if (storeNameError) errors.storeName = storeNameError;
+
+    if (regFormData.email) {
+      const emailError = getEmailError(regFormData.email);
+      if (emailError) errors.email = emailError;
     }
 
     // Phone — hanya cek format kalau sudah ada isinya
@@ -79,6 +120,10 @@ export function useAuth() {
     // Password — minimal 6 karakter
     if (regFormData.password && regFormData.password.length < 6) {
       errors.password = 'Password minimal 6 karakter';
+    }
+    if (regFormData.password) {
+      const passwordError = getPasswordError(regFormData.password);
+      if (passwordError && passwordError !== 'Password wajib diisi') errors.password = passwordError;
     }
 
     // Konfirmasi password — hanya muncul saat field konfirmasi sudah diisi
@@ -145,16 +190,22 @@ export function useAuth() {
       if (!regFormData.password) throw new Error('Password wajib diisi');
       if (!regFormData.confirmPassword) throw new Error('Konfirmasi password wajib diisi');
 
+      const fullNameError = getSafeTextError(regFormData.fullName, 'Nama lengkap');
+      const storeNameError = getSafeTextError(regFormData.storeName, 'Nama toko');
+      if (fullNameError) throw new Error(fullNameError);
+      if (storeNameError) throw new Error(storeNameError);
+
       // --- Validasi format (redundant dengan fieldErrors, tapi biar aman) ---
-      if (!EMAIL_REGEX.test(regFormData.email.trim())) {
-        throw new Error('Format email tidak valid (contoh: nama@domain.com)');
-      }
+      const emailError = getEmailError(regFormData.email);
+      if (emailError) throw new Error(emailError);
       if (!PHONE_REGEX.test(regFormData.phone.trim())) {
         throw new Error('Format nomor telepon tidak valid (8-16 digit angka)');
       }
       if (regFormData.password.length < 6) {
         throw new Error('Password minimal 6 karakter');
       }
+      const passwordError = getPasswordError(regFormData.password);
+      if (passwordError) throw new Error(passwordError);
       if (regFormData.password !== regFormData.confirmPassword) {
         throw new Error('Konfirmasi password tidak cocok');
       }
@@ -310,6 +361,17 @@ export function useAuth() {
   const [loginError, setLoginError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  const loginFieldErrors = useMemo(() => {
+    const errors = {};
+    const emailError = getEmailError(loginFormData.email);
+    const passwordError = getPasswordError(loginFormData.password);
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+    return errors;
+  }, [loginFormData]);
+
+  const hasLoginFieldErrors = Object.keys(loginFieldErrors).length > 0;
+
   const handleLoginChange = useCallback((e) => {
     const { name, value } = e.target;
     setLoginFormData((prev) => ({ ...prev, [name]: value }));
@@ -322,8 +384,9 @@ export function useAuth() {
     setIsLoggingIn(true);
 
     try {
-      if (!loginFormData.email.trim()) throw new Error('Email wajib diisi');
-      if (!loginFormData.password) throw new Error('Password wajib diisi');
+      if (hasLoginFieldErrors) {
+        throw new Error(Object.values(loginFieldErrors)[0]);
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginFormData.email.trim(),
@@ -357,7 +420,7 @@ export function useAuth() {
     } finally {
       setIsLoggingIn(false);
     }
-  }, [loginFormData, fetchMerchant, router]);
+  }, [loginFormData, loginFieldErrors, hasLoginFieldErrors, fetchMerchant, router]);
 
   // ==========================================
   // 5. SESSION CHECK
@@ -469,6 +532,8 @@ export function useAuth() {
       formData: loginFormData,
       error: loginError,
       isSubmitting: isLoggingIn,
+      fieldErrors: loginFieldErrors,
+      hasFieldErrors: hasLoginFieldErrors,
       handleChange: handleLoginChange,
       handleSubmit: submitLogin,
     },

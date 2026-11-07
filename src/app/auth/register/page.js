@@ -123,7 +123,13 @@ export default function RegisterPage() {
                 className={inputClass('fullName')}
                 placeholder="Nama lengkap Anda"
                 autoComplete="name"
+                aria-invalid={!!fieldErrors?.fullName}
               />
+              {fieldErrors?.fullName && (
+                <p className={errorTextClass}>
+                  <ErrorIcon /> {fieldErrors.fullName}
+                </p>
+              )}
             </div>
 
             {/* Nomor Telepon */}
@@ -161,7 +167,13 @@ export default function RegisterPage() {
                 className={inputClass('storeName')}
                 placeholder="Mis. Toko Berkah Jaya"
                 autoComplete="organization"
+                aria-invalid={!!fieldErrors?.storeName}
               />
+              {fieldErrors?.storeName && (
+                <p className={errorTextClass}>
+                  <ErrorIcon /> {fieldErrors.storeName}
+                </p>
+              )}
             </div>
 
             {/* Email */}
