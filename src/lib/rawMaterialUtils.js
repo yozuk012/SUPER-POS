@@ -20,9 +20,42 @@ export function getUnitDefinition(unit) {
   };
 }
 
+export function parseNumberWithComma(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return Number.isNaN(val) ? 0 : val;
+  const str = String(val)
+    .trim()
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const num = parseFloat(str);
+  return Number.isNaN(num) ? 0 : num;
+}
+
+export function formatNumberInputWithComma(value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value)
+      ? value.toLocaleString('id-ID', { maximumFractionDigits: 20 })
+      : '';
+  }
+
+  const input = String(value).trim();
+  const hasDecimalSeparator = input.includes(',');
+  const [integerPart = '', decimalPart = ''] = input.split(',', 2);
+  const integerDigits = integerPart.replace(/\D/g, '') || '0';
+  const formattedInteger = Number(integerDigits).toLocaleString('id-ID');
+
+  if (hasDecimalSeparator) {
+    return `${formattedInteger},${decimalPart.replace(/\D/g, '')}`;
+  }
+
+  return formattedInteger;
+}
+
 export function convertPurchaseToBase({ quantity, unit, totalPrice }) {
-  const purchaseQuantity = Number(quantity);
-  const purchasePrice = Number(totalPrice);
+  const purchaseQuantity = parseNumberWithComma(quantity);
+  const purchasePrice = parseNumberWithComma(totalPrice);
   const { baseUnit, factor } = getUnitDefinition(unit);
 
   if (!Number.isFinite(purchaseQuantity) || purchaseQuantity <= 0) {

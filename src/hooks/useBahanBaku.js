@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
-import { convertPurchaseToBase, getUnitDefinition, validateRawMaterialName } from '@/lib/rawMaterialUtils';
+import { convertPurchaseToBase, getUnitDefinition, validateRawMaterialName, parseNumberWithComma } from '@/lib/rawMaterialUtils';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
 
 const isMissingPurchaseMetadata = (error) => (
@@ -260,7 +260,7 @@ export default function useBahanBaku() {
           raw_material_id: id,
           product_id: null,
           qty_on_hand: Math.round(
-            Math.max(0, Number(stockQuantityInput) || 0) *
+            Math.max(0, parseNumberWithComma(stockQuantityInput)) *
             getUnitDefinition(data.satuan_beli).factor
           ),
           last_updated: new Date().toISOString()

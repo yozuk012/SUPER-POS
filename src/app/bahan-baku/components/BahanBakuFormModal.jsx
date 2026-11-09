@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FiX, FiInfo } from 'react-icons/fi';
-import { getPurchaseEditValues, validateRawMaterialName } from '@/lib/rawMaterialUtils';
+import { getPurchaseEditValues, validateRawMaterialName, parseNumberWithComma, formatNumberInputWithComma } from '@/lib/rawMaterialUtils';
 
 export default function BahanBakuFormModal({
   isOpen,
@@ -31,10 +31,10 @@ export default function BahanBakuFormModal({
         const purchaseValues = getPurchaseEditValues(editingItem);
         setFormData({
           name: editingItem.name || '',
-          qty_beli: String(purchaseValues.quantity),
+          qty_beli: formatNumberInputWithComma(purchaseValues.quantity),
           satuan_beli: purchaseValues.unit || 'kg',
-          total_harga_beli: String(purchaseValues.price || ''),
-          initialStock: String(purchaseValues.stock),
+          total_harga_beli: formatNumberInputWithComma(purchaseValues.price),
+          initialStock: formatNumberInputWithComma(purchaseValues.stock),
           is_perishable: editingItem.is_perishable || false,
           shelf_life_days: editingItem.shelf_life_days || ''
         });
@@ -54,9 +54,14 @@ export default function BahanBakuFormModal({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let processedValue = value;
+    if (['qty_beli', 'total_harga_beli', 'initialStock'].includes(name)) {
+      processedValue = formatNumberInputWithComma(value);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : processedValue
     }));
 
     if (name === 'name') {
@@ -87,13 +92,13 @@ export default function BahanBakuFormModal({
     const payload = {
       name: formData.name.trim(),
       satuan_beli: formData.satuan_beli.toLowerCase(),
-      qty_beli: parseFloat(formData.qty_beli),
-      total_harga_beli: parseFloat(formData.total_harga_beli),
+      qty_beli: parseNumberWithComma(formData.qty_beli),
+      total_harga_beli: parseNumberWithComma(formData.total_harga_beli),
       is_perishable: formData.is_perishable,
-      shelf_life_days: formData.shelf_life_days ? parseInt(formData.shelf_life_days) : null
+      shelf_life_days: formData.shelf_life_days ? parseInt(formData.shelf_life_days, 10) : null
     };
 
-    const initialStockInput = parseFloat(formData.initialStock) || 0;
+    const initialStockInput = parseNumberWithComma(formData.initialStock);
 
     onSubmit(payload, initialStockInput);
   };
@@ -166,13 +171,12 @@ export default function BahanBakuFormModal({
                 Isi Beli <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 name="qty_beli"
                 value={formData.qty_beli}
                 onChange={handleChange}
                 placeholder="1"
-                step="0.01"
-                min="0.01"
                 className={inputBase}
                 required
               />
@@ -205,17 +209,18 @@ export default function BahanBakuFormModal({
               Harga Total Pembelian (Rp) <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="total_harga_beli"
               value={formData.total_harga_beli}
               onChange={handleChange}
-              placeholder="Contoh: 45000"
+              placeholder="Contoh: 45.000 atau 45.000,50"
               className={inputBase}
               required
             />
             <p className="text-[10px] text-slate-500 mt-1 flex items-start gap-1 leading-snug">
               <FiInfo className="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500" />
-              Contoh: isi 1 kg dengan harga 15000 akan dihitung sebagai Rp15/gram di database.
+              Contoh: isi 1 kg dengan harga 15.000 akan dihitung sebagai Rp15/gram di database. Koma digunakan untuk desimal, misalnya 45.000,50.
             </p>
           </div>
 
@@ -225,13 +230,12 @@ export default function BahanBakuFormModal({
               Stok Awal Gudang <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="initialStock"
               value={formData.initialStock}
               onChange={handleChange}
               placeholder="0"
-              min="0"
-              step="0.01"
               className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition"
               required
             />

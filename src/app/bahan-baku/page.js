@@ -5,6 +5,7 @@ import PageLayout from '@/components/PageLayout';
 
 import useBahanBaku from '@/hooks/useBahanBaku';
 import useCopyAvailability from '@/hooks/useCopyAvailability';
+import { parseNumberWithComma } from '@/lib/rawMaterialUtils';
 
 import BahanBakuList from './components/BahanBakuList';
 import BahanBakuFormModal from './components/BahanBakuFormModal';
@@ -58,11 +59,12 @@ export default function BahanBakuPage() {
 
   const handleSubmitForm = async (payload, initialStockInput = 0) => {
     let result;
+    const stockParsed = parseNumberWithComma(initialStockInput);
 
     if (editingItem) {
-      result = await updateBahanBaku(editingItem.id, payload, parseFloat(initialStockInput));
+      result = await updateBahanBaku(editingItem.id, payload, stockParsed);
     } else {
-      result = await addBahanBaku(payload, parseFloat(initialStockInput));
+      result = await addBahanBaku(payload, stockParsed);
     }
 
     if (result.success) {
