@@ -1,4 +1,19 @@
 super-pos
+├── .clinerules
+│   └── ponytail.md
+├── artifacts
+│   └── blackbox
+│       ├── downloads
+│       │   ├── Toko Tes - Cabang Utama Backups Full (1).xlsx
+│       │   ├── Toko Tes - Cabang Utama Backups Full (2).xlsx
+│       │   ├── Toko Tes - Cabang Utama Backups Full (3).xlsx
+│       │   └── Toko Tes - Cabang Utama Backups Full.xlsx
+│       ├── fixtures
+│       │   └── produk-uji.png
+│       ├── screenshots
+│       │   ├── 8QQXUQ-STK-02-fail.png
+│       │   └── 8REWC7-PRD-03-fail.png
+│       └── selenium-report.json
 ├── public
 │   ├── icons
 │   │   ├── apple-touch-icon.png
@@ -9,6 +24,9 @@ super-pos
 │   ├── favicon.ico
 │   ├── logo-SP.png
 │   └── sw.js
+├── scripts
+│   └── blackbox
+│       └── selenium-blackbox.js
 ├── src
 │   ├── app
 │   │   ├── api
@@ -149,6 +167,7 @@ super-pos
 │   │   └── sitemap.js
 │   ├── blueprint
 │   │   ├── AUDIT.md
+│   │   ├── BLACKBOX-REPORT.md
 │   │   ├── BLACKBOX-TEST.md
 │   │   ├── DATABASE.MD
 │   │   ├── PANDUAN.txt

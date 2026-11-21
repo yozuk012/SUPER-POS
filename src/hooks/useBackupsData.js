@@ -231,9 +231,9 @@ const SALES_HEADERS = [
   'No. Struk', 'Tanggal', 'Jam', 'Channel', 'Metode Pembayaran', 'Nama Produk',
   'Jumlah', 'Harga Satuan (Rp)', 'HPP per Unit (Rp)', 'Subtotal Item (Rp)',
   'Diskon Struk (Rp)', 'Potongan Platform (Rp)', 'Total Akhir Struk (Rp)',
-  'Ref QRIS / Catatan', 'Waktu Lunas QRIS',
+  'Ref QRIS / Catatan', 'Waktu Lunas QRIS', 'Status Transaksi', 'Alasan Void',
 ];
-const SALES_WIDTHS = [12, 12, 8, 16, 18, 30, 10, 16, 16, 16, 16, 20, 18, 26, 18];
+const SALES_WIDTHS = [12, 12, 8, 16, 18, 30, 10, 16, 16, 16, 16, 20, 18, 26, 18, 18, 36];
 const SALES_NUMBER_FORMATS = {
   6: QTY_FORMAT, 7: RUPIAH_FORMAT, 8: RUPIAH_FORMAT, 9: RUPIAH_FORMAT,
   10: RUPIAH_FORMAT, 11: RUPIAH_FORMAT, 12: RUPIAH_FORMAT,
@@ -544,6 +544,7 @@ export function useBackupsData(storeId, userId) {
         const salesRows = saleItems.map((item) => {
           const sale = salesMap.get(item.sale_id);
           const product = productMap.get(item.product_id);
+          if (sale?.is_voided) return null;
           return [
             item.sale_id,
             formatTanggal(sale?.sale_date),
@@ -560,8 +561,10 @@ export function useBackupsData(storeId, userId) {
             Number(sale?.grand_total) || 0,
             sale?.qris_reference || sale?.notes || '-',
             sale?.qris_paid_at ? formatTanggalWaktu(sale.qris_paid_at) : '-',
+            sale?.is_voided ? 'DIBATALKAN' : 'Selesai',
+            sale?.void_reason || '-',
           ];
-        });
+        }).filter(Boolean);
         XLSX.utils.book_append_sheet(
           wb,
           createTableSheet(SALES_HEADERS, salesRows, {
@@ -643,16 +646,22 @@ export function useBackupsData(storeId, userId) {
               Number(sale.grand_total) || 0,
               sale.qris_reference || sale.notes || '-',
               sale.qris_paid_at ? formatTanggalWaktu(sale.qris_paid_at) : '-',
+              sale.is_voided ? 'DIBATALKAN' : 'Selesai',
+              sale.void_reason || '-',
             ]);
           });
         });
 
-        const totalOmzet = sales.reduce((sum, sale) => sum + (Number(sale.grand_total) || 0), 0);
-        const totalItemTerjual = rows.reduce((sum, row) => sum + (Number(row[6]) || 0), 0);
+        const totalOmzet = sales.reduce((sum, sale) => sum + (sale.is_voided ? 0 : Number(sale.grand_total) || 0), 0);
+        const totalItemTerjual = sales.filter((sale) => !sale.is_voided).reduce(
+          (sum, sale) => sum + (sale.sale_items || []).reduce((itemSum, item) => itemSum + (Number(item.qty) || 0), 0),
+          0
+        );
 
         recordCounts = [
-          { label: 'Jumlah Struk / Transaksi', count: sales.length },
-          { label: 'Jumlah Baris Produk Terjual', count: rows.length },
+          { label: 'Jumlah Transaksi Aktif', count: sales.filter((sale) => !sale.is_voided).length },
+          { label: 'Jumlah Transaksi Void (Audit)', count: sales.filter((sale) => sale.is_voided).length },
+          { label: 'Jumlah Baris Produk Terjual', count: rows.filter((row) => row[15] !== 'DIBATALKAN').length },
           { label: 'Total Item Terjual', count: totalItemTerjual },
           { label: 'Total Omzet (Rp)', count: totalOmzet },
         ];
@@ -844,7 +853,7 @@ export function useBackupsData(storeId, userId) {
 
       // Path di storage tetap memakai timestamp agar tidak bentrok,
       // sedangkan nama file yang diunduh memakai nama toko + jenis backup.
-      const filePath = `backups/${storeId}/${backupType}/${safeName}_${timestamp}.xlsx`;
+      const filePath = `${storeId}/${backupType}/${safeName}_${timestamp}.xlsx`;
       const { data: storageData, error: storageError } = await supabase.storage
         .from('backups') // Pastikan bucket ini sudah dibuat dan Private
         .upload(filePath, file, { upsert: false });
@@ -945,7 +954,7 @@ export function useBackupsData(storeId, userId) {
       }
 
       // Arsipkan file asli yang diimpor agar riwayat tetap bisa ditelusuri
-      const archivePath = `backups/${storeId}/IMPORT_ARCHIVES/import_${scope}_${Date.now()}.xlsx`;
+      const archivePath = `${storeId}/IMPORT_ARCHIVES/import_${scope}_${Date.now()}.xlsx`;
       const { error: archiveError } = await supabase.storage
         .from('backups')
         .upload(archivePath, file);
@@ -964,7 +973,7 @@ export function useBackupsData(storeId, userId) {
         XLSX.utils.book_append_sheet(errorWb, errorWs, 'Data Gagal Diimpor');
         const errorBuffer = XLSX.write(errorWb, { bookType: 'xlsx', type: 'array' });
         const errorFile = new File([errorBuffer], `error_log_${Date.now()}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        errorLogPath = `backups/${storeId}/IMPORT_LOGS/error_log_${Date.now()}.xlsx`;
+        errorLogPath = `${storeId}/IMPORT_LOGS/error_log_${Date.now()}.xlsx`;
         await supabase.storage.from('backups').upload(errorLogPath, errorFile);
       }
 

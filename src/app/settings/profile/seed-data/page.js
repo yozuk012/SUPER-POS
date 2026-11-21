@@ -40,10 +40,24 @@ export default function SeedDataPage() {
 }
 
 function SeedDataContent() {
-  // 1. Ambil katalog seed + fungsi eksekusi dari hook
+  // 1. Opsi seed (dikontrol user sebelum dijalankan)
+  const [options, setOptions] = useState({
+    schema: ['public', 'dev'].includes(process.env.NEXT_PUBLIC_SUPABASE_SCHEMA)
+      ? process.env.NEXT_PUBLIC_SUPABASE_SCHEMA
+      : 'public',
+    accountId: '',
+    uploadImages: true,
+    createInventory: true,
+    existingMode: SEED_EXISTING_MODES.FILL_EMPTY,
+    roundingStep: SEED_DEFAULT_ROUNDING_STEP,
+    priceMode: SEED_PRICE_MODES.WITH_PRICE,
+  });
+
+  // 2. Ambil katalog seed + fungsi eksekusi dari hook
   const {
     catalog,
     store,
+    accounts,
     existingStats,
     loading,
     isSeeding,
@@ -54,16 +68,7 @@ function SeedDataContent() {
     error,
     runSeed,
     resetSummary,
-  } = useSeedData();
-
-  // 2. Opsi seed (dikontrol user sebelum dijalankan)
-  const [options, setOptions] = useState({
-    uploadImages: true,
-    createInventory: true,
-    existingMode: SEED_EXISTING_MODES.FILL_EMPTY,
-    roundingStep: SEED_DEFAULT_ROUNDING_STEP,
-    priceMode: SEED_PRICE_MODES.WITH_PRICE,
-  });
+  } = useSeedData(options.schema, options.accountId);
 
   const handleOptionChange = (e) => {
     const { name, type, checked, value } = e.target;
@@ -95,7 +100,7 @@ function SeedDataContent() {
     if (isSeeding) return;
 
     const confirmMessage =
-      `Jalankan seed data ke toko "${store?.name || '-'}"?\n\n` +
+      `Jalankan seed data ke schema "${options.schema}" dan toko "${store?.name || '-'}"?\n\n` +
       `• ${catalog.categories.length} kategori\n` +
       `• ${catalog.products.length} produk (${priceModeLabel})\n` +
       `• Harga online disimpan apa adanya, HPP tidak diubah\n` +
@@ -155,7 +160,7 @@ function SeedDataContent() {
         />
 
         {/* Opsi Seed */}
-        <SeedOptionsCard options={options} onChange={handleOptionChange} disabled={isSeeding} />
+        <SeedOptionsCard options={options} accounts={accounts} onChange={handleOptionChange} disabled={isSeeding} />
 
         {/* Tombol Eksekusi + Progress + Log */}
         <SeedProgressCard

@@ -58,6 +58,7 @@ export function useDashboard(storeId, userId, dateRange) {
         .from('sales')
         .select('id, grand_total, discount, platform_fee')
         .eq('store_id', resolvedStoreId)
+        .eq('is_voided', false)
         .gte('sale_date', startOfPeriod)
         .lte('sale_date', endOfPeriod);
 
@@ -156,12 +157,15 @@ export function useDashboard(storeId, userId, dateRange) {
           channel,
           payment_method,
           grand_total,
-          qris_status
+          qris_status,
+          is_voided
         `)
         .eq('store_id', resolvedStoreId)
+        .eq('is_voided', false)
         .gte('sale_date', startOfPeriod)
         .lte('sale_date', endOfPeriod)
         .order('sale_date', { ascending: false })
+        .eq('is_voided', false)
         .limit(5);
 
       if (recentSalesError) throw recentSalesError;
@@ -174,6 +178,7 @@ export function useDashboard(storeId, userId, dateRange) {
         .from('sales')
         .select('sale_date, grand_total')
         .eq('store_id', resolvedStoreId)
+        .eq('is_voided', false)
         .gte('sale_date', startOfPeriod)
         .lte('sale_date', endOfPeriod);
 

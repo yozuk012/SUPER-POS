@@ -18,8 +18,15 @@ import {
 // Jumlah produk yang diproses bersamaan (upload gambar + insert) per batch
 const SEED_CHUNK_SIZE = 5;
 
-export function useSeedData() {
+const SEED_SCHEMAS = ['public', 'dev'];
+const DEFAULT_SEED_SCHEMA = SEED_SCHEMAS.includes(process.env.NEXT_PUBLIC_SUPABASE_SCHEMA)
+  ? process.env.NEXT_PUBLIC_SUPABASE_SCHEMA
+  : 'public';
+
+export function useSeedData(schema = DEFAULT_SEED_SCHEMA, targetAccountId = '') {
   const { convertToWebP } = useConvert();
+  const selectedSchema = SEED_SCHEMAS.includes(schema) ? schema : DEFAULT_SEED_SCHEMA;
+  const db = useMemo(() => supabase.schema(selectedSchema), [selectedSchema]);
 
   // ==========================================
   // 1. STATE MANAGEMENT
@@ -27,6 +34,7 @@ export function useSeedData() {
   const catalog = useMemo(() => buildSeedCatalog(), []);
 
   const [store, setStore] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [existingStats, setExistingStats] = useState({ categories: 0, products: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -51,8 +59,8 @@ export function useSeedData() {
   // ==========================================
   const countStoreData = useCallback(async (storeId) => {
     const [categoryRes, productRes] = await Promise.all([
-      supabase.from('categories').select('id', { count: 'exact', head: true }).eq('store_id', storeId),
-      supabase.from('products').select('id', { count: 'exact', head: true }).eq('store_id', storeId),
+      db.from('categories').select('id', { count: 'exact', head: true }).eq('store_id', storeId),
+      db.from('products').select('id', { count: 'exact', head: true }).eq('store_id', storeId),
     ]);
 
     if (categoryRes.error) {
@@ -66,7 +74,7 @@ export function useSeedData() {
       categories: categoryRes.count || 0,
       products: productRes.count || 0,
     };
-  }, []);
+  }, [db]);
 
   // Ambil user id langsung dari Supabase (bukan dari objek `user` useAuth)
   // supaya identitasnya stabil dan tidak memicu re-render berantai.
@@ -78,7 +86,7 @@ export function useSeedData() {
   const fetchActiveStore = useCallback(async (userId) => {
     if (!userId) return null;
 
-    const { data, error: storesError } = await supabase
+    const { data, error: storesError } = await db
       .from('stores')
       .select('id, name')
       .eq('user_id', userId)
@@ -87,7 +95,17 @@ export function useSeedData() {
 
     if (storesError) throw new Error('Gagal memuat toko: ' + storesError.message);
     return resolveActiveStore(data || []);
-  }, []);
+  }, [db]);
+
+  const fetchAccounts = useCallback(async () => {
+    const { data, error } = await db
+      .from('merchants')
+      .select('id, full_name, store_name')
+      .order('full_name');
+
+    if (error) throw new Error('Gagal memuat daftar akun: ' + error.message);
+    return data || [];
+  }, [db]);
 
   const loadContext = useCallback(async () => {
     // Await pertama dilakukan sebelum setState apa pun supaya efek ini tidak
@@ -103,7 +121,10 @@ export function useSeedData() {
 
     setLoading(true);
     try {
-      const activeStore = await fetchActiveStore(userId);
+      const availableAccounts = await fetchAccounts();
+      setAccounts(availableAccounts);
+      const selectedUserId = targetAccountId || userId;
+      const activeStore = await fetchActiveStore(selectedUserId);
       setStore(activeStore || null);
       setExistingStats(
         activeStore?.id ? await countStoreData(activeStore.id) : { categories: 0, products: 0 }
@@ -114,7 +135,7 @@ export function useSeedData() {
     } finally {
       setLoading(false);
     }
-  }, [getCurrentUserId, fetchActiveStore, countStoreData]);
+  }, [getCurrentUserId, fetchAccounts, fetchActiveStore, countStoreData, targetAccountId]);
 
   useEffect(() => {
     // loadContext() hanya memanggil setState setelah await pertama (ambil user
@@ -200,7 +221,8 @@ export function useSeedData() {
 
       // --- STEP 1: Tentukan toko aktif ---
       setPhase('Menyiapkan toko aktif...');
-      const activeStore = store || (await fetchActiveStore(userId));
+      const selectedUserId = targetAccountId || userId;
+      const activeStore = store || (await fetchActiveStore(selectedUserId));
       if (!activeStore?.id) {
         throw new Error('Tidak ada toko aktif. Buat toko terlebih dahulu di Pengaturan > Stores.');
       }
@@ -210,7 +232,7 @@ export function useSeedData() {
 
       // --- STEP 2: Kategori produk ---
       setPhase('Menyiapkan kategori produk...');
-      const { data: existingCategories, error: categoryFetchError } = await supabase
+      const { data: existingCategories, error: categoryFetchError } = await db
         .from('categories')
         .select('id, name')
         .eq('store_id', storeId);
@@ -226,7 +248,7 @@ export function useSeedData() {
       );
 
       if (newCategories.length > 0) {
-        const { data: insertedCategories, error: categoryInsertError } = await supabase
+        const { data: insertedCategories, error: categoryInsertError } = await db
           .from('categories')
           .insert(newCategories.map((category) => ({ store_id: storeId, name: category.name })))
           .select('id, name');
@@ -247,7 +269,7 @@ export function useSeedData() {
 
       // --- STEP 3: Siapkan daftar produk yang akan di-seed ---
       setPhase('Menyiapkan daftar produk...');
-      const { data: existingProducts, error: productFetchError } = await supabase
+      const { data: existingProducts, error: productFetchError } = await db
         .from('products')
         .select('id, name, sku, base_price, online_markup_pct, product_prices ( id, channel, price )')
         .eq('store_id', storeId);
@@ -271,7 +293,7 @@ export function useSeedData() {
       });
 
       // SKU bersifat unik global, jadi ambil semua SKU milik user (semua cabang)
-      const { data: skuRows, error: skuFetchError } = await supabase.from('products').select('sku');
+      const { data: skuRows, error: skuFetchError } = await db.from('products').select('sku');
       if (skuFetchError) throw new Error('Gagal memuat SKU produk: ' + skuFetchError.message);
       const usedSkus = new Set(
         (skuRows || []).map((row) => String(row.sku || '').toUpperCase()).filter(Boolean)
@@ -406,7 +428,7 @@ export function useSeedData() {
                 is_active: true,
               };
 
-              const { data, error: insertError } = await supabase
+              const { data, error: insertError } = await db
                 .from('products')
                 .insert(payload)
                 .select('id, name')
@@ -417,7 +439,7 @@ export function useSeedData() {
               // 4c. Simpan harga online ke product_prices
               let priceSynced = false;
               if (item.online_price > 0) {
-                const { error: priceError } = await supabase.from('product_prices').insert({
+                const { error: priceError } = await db.from('product_prices').insert({
                   product_id: data.id,
                   channel: 'online',
                   price: item.online_price,
@@ -467,7 +489,7 @@ export function useSeedData() {
             last_updated: new Date().toISOString(),
           }));
 
-          const { error: inventoryError } = await supabase.from('inventory').insert(inventoryPayload);
+          const { error: inventoryError } = await db.from('inventory').insert(inventoryPayload);
 
           if (inventoryError) {
             pushLog('error', 'Gagal menyimpan baris stok produk baru: ' + inventoryError.message);
@@ -494,7 +516,7 @@ export function useSeedData() {
             chunk.map(async (item) => {
               try {
                 if (item.updateBasePrice) {
-                  const { error: productError } = await supabase
+                    const { error: productError } = await db
                     .from('products')
                     .update({
                       base_price: item.offline_price,
@@ -510,14 +532,14 @@ export function useSeedData() {
 
                 if (item.updateOnlinePrice && item.online_price > 0) {
                   if (item.existing.online_price_id) {
-                    const { error: priceError } = await supabase
+                    const { error: priceError } = await db
                       .from('product_prices')
                       .update({ price: item.online_price })
                       .eq('id', item.existing.online_price_id);
 
                     if (priceError) throw new Error(priceError.message);
                   } else {
-                    const { error: priceError } = await supabase.from('product_prices').insert({
+                    const { error: priceError } = await db.from('product_prices').insert({
                       product_id: item.existing.id,
                       channel: 'online',
                       price: item.online_price,
@@ -591,7 +613,7 @@ export function useSeedData() {
     } finally {
       setIsSeeding(false);
     }
-  }, [catalog, store, getCurrentUserId, fetchActiveStore, countStoreData, pushLog, uploadSeedImage]);
+  }, [catalog, store, getCurrentUserId, fetchActiveStore, countStoreData, pushLog, uploadSeedImage, db, targetAccountId]);
 
   // ==========================================
   // 6. RETURN VALUES
@@ -599,6 +621,7 @@ export function useSeedData() {
   return {
     catalog,
     store,
+    accounts,
     existingStats,
     loading,
     isSeeding,

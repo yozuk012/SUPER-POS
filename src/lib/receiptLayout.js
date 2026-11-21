@@ -112,6 +112,8 @@ export function buildReceiptLayout(receiptData, options = {}) {
     });
   };
 
+  if (data.is_voided) pushText('*** DIBATALKAN / VOID ***', { align: 'center', bold: true });
+
   // 1. HEADER TOKO
   pushText(store.name || 'NAMA TOKO', { align: 'center', bold: true });
   if (store.address) pushText(store.address, { align: 'center' });
@@ -124,6 +126,7 @@ export function buildReceiptLayout(receiptData, options = {}) {
   pushRow('Kasir', data.cashier_name || 'Admin');
   pushRow('Pelanggan', data.customer_name || '-');
   pushRow('Pembayaran', paymentMethod ? paymentMethod.toUpperCase() : '-');
+  if (data.is_voided && data.void_reason) pushText(`Catatan batal: ${data.void_reason}`);
   lines.push({ kind: 'hr' });
 
   // 3. RINCIAN ITEM

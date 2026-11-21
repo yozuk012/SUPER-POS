@@ -76,7 +76,7 @@ const optionCardClass = (disabled) =>
     disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'
   } border-gray-200`;
 
-export default function SeedOptionsCard({ options, onChange, disabled }) {
+export default function SeedOptionsCard({ options, accounts, onChange, disabled }) {
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
       <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -85,6 +85,38 @@ export default function SeedOptionsCard({ options, onChange, disabled }) {
       </h2>
 
       <div className="space-y-3">
+        <label className={optionCardClass(disabled)}>
+          <span className="w-32 shrink-0 text-sm font-medium text-gray-800">Schema tujuan</span>
+          <select
+            name="schema"
+            value={options.schema}
+            onChange={onChange}
+            disabled={disabled}
+            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="public">public (production)</option>
+            <option value="dev">dev (development)</option>
+          </select>
+        </label>
+
+        <label className={optionCardClass(disabled)}>
+          <span className="w-32 shrink-0 text-sm font-medium text-gray-800">Akun tujuan</span>
+          <select
+            name="accountId"
+            value={options.accountId}
+            onChange={onChange}
+            disabled={disabled}
+            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">Akun login saat ini</option>
+            {(accounts || []).map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.full_name || 'Tanpa nama'} - {account.store_name || account.id}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {OPTIONS.map((option) => (
           <label key={option.name} className={optionCardClass(disabled)}>
             <input

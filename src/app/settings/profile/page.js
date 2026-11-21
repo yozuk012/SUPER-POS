@@ -48,7 +48,7 @@ export default function ProfilePage() {
             .from('merchants')
             .select('full_name, store_name, store_logo_url')
             .eq('id', user.id)
-            .single(),
+            .maybeSingle(),
           storeId
             ? supabase
                 .from('stores')
@@ -66,6 +66,10 @@ export default function ProfilePage() {
           setUserName(merchant.full_name || 'Pengguna');
           setBusinessName(store?.name || merchant.store_name || 'Nama Toko');
           setLogoUrl(store?.logo_url || merchant.store_logo_url || null);
+        } else {
+          setUserName(user.user_metadata?.full_name || user.email || 'Pengguna');
+          setBusinessName(user.user_metadata?.store_name || 'Nama Toko');
+          setLogoUrl(null);
         }
       } catch (err) {
         console.error('Gagal memuat profil:', err);

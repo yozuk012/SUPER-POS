@@ -1,8 +1,8 @@
 // src/hooks/useHistory.js
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
+import { useAuth } from './useAuth';
 
 export default function useHistory() {
   const { user } = useAuth();
@@ -13,6 +13,7 @@ export default function useHistory() {
   // State Filter
   const [filterChannel, setFilterChannel] = useState("all"); // all, online, offline
   const [activePeriodIndex, setActivePeriodIndex] = useState(0);
+  const [isVoiding, setIsVoiding] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     if (!user?.id) {
@@ -28,7 +29,7 @@ export default function useHistory() {
       // 1. Ambil Toko Aktif
       const { data: stores, error: storeError } = await supabase
         .from('stores')
-        .select('id')
+        .select('id, name, address, logo_url, bank_name, account_number, account_name, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('id', { ascending: true });
@@ -50,12 +51,20 @@ export default function useHistory() {
           sale_date,
           channel,
           payment_method,
+          subtotal,
           discount,
           grand_total,
           notes,
           qris_status,
+          qris_paid_at,
+          is_voided,
+          voided_at,
+          voided_by,
+          void_reason,
           sale_items (
             qty,
+            unit_price,
+            line_total,
             products ( name )
           )
         `)
@@ -68,12 +77,12 @@ export default function useHistory() {
       // Transformasi data dasar
       const transformed = (data || []).map((sale) => {
         const saleDate = new Date(sale.sale_date);
-        const customerName = sale.notes && sale.notes.trim() !== '' 
-          ? sale.notes 
-          : 'Pelanggan Umum';
+        const customerName = sale.notes?.replace(/^Customer:\s*/, '').trim() || 'Pelanggan Umum';
 
         let statusText = sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1);
-        if (sale.payment_method === 'qris') {
+        if (sale.is_voided) {
+          statusText = 'Dibatalkan';
+        } else if (sale.payment_method === 'qris') {
           const qrisStatusMap = { success: 'Selesai', failed: 'Gagal', pending: 'Pending' };
           statusText += ` (${qrisStatusMap[sale.qris_status] || 'Pending'})`;
         } else {
@@ -83,15 +92,45 @@ export default function useHistory() {
         return {
           orderId: sale.id,
           dateTime: sale.sale_date,
+          saleDate: sale.sale_date,
           date: saleDate.toLocaleDateString("id-ID", { day: '2-digit', month: '2-digit', year: 'numeric' }),
           time: saleDate.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }),
           customerName,
           items: (sale.sale_items || []).map((item) => ({
             name: item.products?.name || 'Produk tidak ditemukan',
             qty: item.qty,
+            unit_price: Number(item.unit_price) || 0,
+            line_total: Number(item.line_total) || 0,
           })),
+          subtotalAmount: Number(sale.subtotal) || 0,
           totalAmount: parseFloat(sale.grand_total) || 0,
           discountAmount: parseFloat(sale.discount) || 0,
+          paymentMethod: sale.payment_method,
+          isVoided: Boolean(sale.is_voided),
+          isSuccessful: !sale.is_voided && (sale.payment_method !== 'qris' || sale.qris_status === 'success'),
+          canVoid: !sale.is_voided && (sale.payment_method !== 'qris' || sale.qris_status === 'success'),
+          voidReason: sale.void_reason,
+          receiptData: {
+            store: activeStore,
+            transaction_id: `TRX-${sale.id}`,
+            date: saleDate.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            customer_name: customerName,
+            items: (sale.sale_items || []).map((item) => ({
+              name: item.products?.name || 'Produk tidak ditemukan',
+              qty: item.qty,
+              unit_price: Number(item.unit_price) || 0,
+              line_total: Number(item.line_total) || 0,
+              original_unit_price: Number(item.unit_price) || 0,
+            })),
+            subtotal: Number(sale.subtotal) || 0,
+            discount: Number(sale.discount) || 0,
+            grand_total: Number(sale.grand_total) || 0,
+            amount_paid: Number(sale.grand_total) || 0,
+            change: 0,
+            payment_method: sale.payment_method,
+            is_voided: Boolean(sale.is_voided),
+            void_reason: sale.void_reason,
+          },
           status: statusText,
           channel: sale.channel === 'offline' ? 'offline' : 'online',
           month: saleDate.getMonth(),    // 0-11
@@ -107,6 +146,31 @@ export default function useHistory() {
       setLoading(false);
     }
   }, [user]);
+
+  const voidTransaction = useCallback(async (saleId, reason) => {
+    const trimmedReason = String(reason || '').trim();
+    if (!trimmedReason) throw new Error('Catatan pembatalan wajib diisi.');
+    if (!user?.id) throw new Error('Sesi login tidak ditemukan.');
+
+    setIsVoiding(true);
+    try {
+      const { data, error: voidError } = await supabase
+        .from('sales')
+        .update({ is_voided: true, voided_at: new Date().toISOString(), voided_by: user.id, void_reason: trimmedReason })
+        .eq('id', saleId)
+        .eq('is_voided', false)
+        .select('id');
+
+      if (voidError) throw voidError;
+      if (!data?.length) throw new Error('Transaksi sudah dibatalkan atau tidak dapat diakses.');
+      await fetchHistory();
+    } catch (error) {
+      setError(error.message || 'Gagal membatalkan transaksi.');
+      throw error;
+    } finally {
+      setIsVoiding(false);
+    }
+  }, [user, fetchHistory]);
 
   useEffect(() => {
     if (user?.id) {
@@ -208,7 +272,9 @@ export default function useHistory() {
     filterChannel,
     setFilterChannel,
     loading,
+    isVoiding,
     error,
+    voidTransaction,
     refetch: fetchHistory,
   };
 }

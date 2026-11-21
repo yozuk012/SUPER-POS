@@ -408,6 +408,10 @@ Buat file `.env.local` di root project (`my-pos/`) dengan isi:
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 
+# Schema default untuk aplikasi dan pilihan awal Seed Data
+# Gunakan public untuk production atau dev untuk development.
+NEXT_PUBLIC_SUPABASE_SCHEMA=dev
+
 # Opsional — aktifkan menu Seed Data di production
 NEXT_PUBLIC_ENABLE_SEED_DATA=false
 
@@ -423,6 +427,7 @@ NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Ya | URL project Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Ya | Anon/public key Supabase |
+| `NEXT_PUBLIC_SUPABASE_SCHEMA` | Tidak | Schema default aplikasi dan pilihan awal Seed Data: `public` atau `dev`. Default: `public`. |
 | `NEXT_PUBLIC_ENABLE_SEED_DATA` | Tidak | `true` untuk menampilkan menu seed data di production |
 | `NEXT_PUBLIC_SITE_URL` | Tidak | URL publik situs. Default: `http://localhost:3000` (dev) dan `https://www.superpos.web.id` (production). Isi hanya jika memakai domain lain. |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Tidak | Kode verifikasi Google Search Console untuk `<meta name="google-site-verification">` |

@@ -76,6 +76,7 @@ export default function useReport(filters = {}) {
           grand_total,
           notes,
           qris_status,
+          is_voided,
           sale_items (
             id,
             qty,
@@ -85,6 +86,7 @@ export default function useReport(filters = {}) {
           )
         `)
         .eq('store_id', store.id)
+        .eq('is_voided', false)
         .gte('sale_date', queryStart)
         .lte('sale_date', queryEnd)
         .order('sale_date', { ascending: false });
@@ -108,9 +110,7 @@ export default function useReport(filters = {}) {
 
       // 4. Transformasi Data Penjualan per Transaksi
       const transformedData = (salesData || []).map((sale) => {
-        const customerName = sale.notes && sale.notes.trim() !== '' 
-          ? sale.notes 
-          : 'Pelanggan Umum';
+        const customerName = sale.notes?.replace(/^Customer:\s*/, '').trim() || 'Pelanggan Umum';
 
         const paymentMethod = sale.payment_method || 'unknown';
         let statusText = paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1);

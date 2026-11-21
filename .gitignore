@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/artifacts/
 
 # next.js
 /.next/
@@ -46,3 +47,7 @@ next-env.d.ts
 
 #blueprint
 /src/blueprint/
+
+# Cline rules
+.clinerules
+.clinerules/

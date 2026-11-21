@@ -1,13 +1,18 @@
 // src/app/history/page.js
 "use client";
 
-import React from "react";
+import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import HistoryFilters from "./components/HistoryFilters";
 import HistoryList from "./components/HistoryList";
 import useHistory from "@/hooks/useHistory";
+import ReceiptModal from "@/app/transaksi/components/ReceiptModal";
 
 export default function HistoryPage() {
+  const [receiptData, setReceiptData] = useState(null);
+  const [voidTarget, setVoidTarget] = useState(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState('');
   const {
     paginatedData,
     periods,
@@ -17,7 +22,21 @@ export default function HistoryPage() {
     setFilterChannel,
     loading,
     error,
+    isVoiding,
+    voidTransaction,
   } = useHistory();
+
+  const handleVoid = async (event) => {
+    event.preventDefault();
+    setVoidError('');
+    try {
+      await voidTransaction(voidTarget.orderId, voidReason);
+      setVoidTarget(null);
+      setVoidReason('');
+    } catch (err) {
+      setVoidError(err.message || 'Gagal membatalkan transaksi.');
+    }
+  };
 
   return (
     <PageLayout title="Riwayat Transaksi">
@@ -77,11 +96,29 @@ export default function HistoryPage() {
             <HistoryList
               paginatedData={paginatedData}
               loading={loading}
+              onPrintReceipt={setReceiptData}
+              onVoidTransaction={(item) => { setVoidTarget(item); setVoidReason(''); setVoidError(''); }}
             />
 
           </div>
         </div>
       </div>
+      {receiptData && <ReceiptModal receiptData={receiptData} onClose={() => setReceiptData(null)} />}
+      {voidTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isVoiding) setVoidTarget(null); }}>
+          <form onSubmit={handleVoid} className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="void-title">
+            <h2 id="void-title" className="text-lg font-bold text-slate-900">Batalkan transaksi #{voidTarget.orderId}</h2>
+            <p className="mt-1 text-sm text-slate-600">Transaksi tetap tercatat dan tidak dihitung dalam laporan. Stok tidak dikembalikan.</p>
+            <label htmlFor="void-reason" className="mt-4 block text-sm font-medium text-slate-700">Catatan pembatalan <span className="text-red-600">*</span></label>
+            <textarea id="void-reason" required minLength={3} maxLength={500} value={voidReason} onChange={(event) => setVoidReason(event.target.value)} className="mt-1 min-h-24 w-full rounded border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Contoh: salah input harga" />
+            {voidError && <p role="alert" className="mt-2 text-sm text-red-700">{voidError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" disabled={isVoiding} onClick={() => setVoidTarget(null)} className="rounded border border-slate-300 px-3 py-2 text-sm">Kembali</button>
+              <button type="submit" disabled={isVoiding || voidReason.trim().length < 3} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{isVoiding ? 'Memproses...' : 'Batalkan transaksi'}</button>
+            </div>
+          </form>
+        </div>
+      )}
     </PageLayout>
   );
 }
