@@ -1684,9 +1684,9 @@ test({
   steps: [
     'Hapus pengeluaran uji',
     'Hapus produk resep/HPP uji',
-    'Hapus bahan baku, produk, dan kategori uji',
+    'Hapus bahan baku; hapus atau nonaktifkan produk uji sesuai relasi database',
   ],
-  expected: 'Data master & pengeluaran uji terhapus (transaksi penjualan tetap tersimpan sebagai histori)',
+  expected: 'Data uji dibersihkan; produk yang masih dirujuk dinonaktifkan dan kategorinya dipertahankan',
   run: async (driver) => {
     if (!CLEANUP) {
       throw new BlockedError('Set BLACKBOX_CLEANUP=true untuk menjalankan pembersihan otomatis');
@@ -1694,8 +1694,8 @@ test({
     const notes = [];
     const attempt = async (label, fn) => {
       try {
-        await fn();
-        notes.push(`${label}: terhapus`);
+        const result = await fn();
+        notes.push(`${label}: ${result || 'terhapus'}`);
       } catch (error) {
         notes.push(`${label}: GAGAL (${truncate(error.message, 120)})`);
       }
@@ -1732,18 +1732,31 @@ test({
       await readAlert(driver, TIMEOUT_MS);
     });
 
+    let productKept = false;
     await attempt('Produk uji', async () => {
       await goto(driver, '/product');
       await searchProduct(driver, state.productName);
+      const row = `//tr[contains(., ${JSON.stringify(state.productName)})]`;
       await click(driver, By.xpath(
-        `//tr[contains(., ${JSON.stringify(state.productName)})]//button[@aria-label="Hapus produk"]`,
+        `${row}//button[@aria-label="Hapus produk"]`,
       ));
       await readAlert(driver, TIMEOUT_MS);
-      const message = await readAlert(driver, TIMEOUT_MS);
-      if (message) throw new Error(message);
+      const message = await readAlert(driver, 5000);
+      if (!message) {
+        await waitGone(driver, By.xpath(row), NAV_TIMEOUT_MS);
+        return;
+      }
+      if (!/Nonaktifkan produk/i.test(message)) throw new Error(message);
+
+      productKept = true;
+      await click(driver, By.xpath(`${row}//button[@title="Nonaktifkan produk"]`));
+      await readAlert(driver, TIMEOUT_MS);
+      await waitVisible(driver, By.xpath(`${row}//button[@title="Aktifkan produk"]`), NAV_TIMEOUT_MS);
+      return 'dinonaktifkan karena masih dirujuk';
     });
 
     await attempt('Kategori uji', async () => {
+      if (productKept) return 'dipertahankan untuk produk uji';
       await goto(driver, '/category');
       await click(driver, By.xpath(
         `//tr[contains(., ${JSON.stringify(state.categoryRenamed)})]//button[@aria-label="Hapus kategori"]`,

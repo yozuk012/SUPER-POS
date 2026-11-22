@@ -132,6 +132,33 @@ export function getPurchaseEditValues(material) {
   };
 }
 
+export async function deleteRawMaterial(supabase, id, storeId) {
+  if (!storeId) return { success: false, message: 'Pilih cabang sebelum menghapus bahan baku.' };
+
+  // Biarkan database menangani stok dan relasinya dalam operasi yang sama.
+  const { data, error } = await supabase
+    .from('raw_materials')
+    .delete()
+    .eq('id', id)
+    .eq('store_id', storeId)
+    .select('id')
+    .maybeSingle();
+
+  if (error?.code === '23503') {
+    const details = `${error.message || ''} ${error.details || ''}`;
+    const message = /\brecipe_ingredients\b/.test(details)
+      ? 'Bahan baku masih dipakai dalam resep. Ganti atau keluarkan bahan ini dari resep terkait sebelum menghapusnya.'
+      : /\binventory\b/.test(details)
+        ? 'Data stok masih merujuk bahan baku ini. Minta admin memeriksa relasi stok sebelum mencoba lagi.'
+        : 'Bahan baku masih dirujuk oleh data lain. Periksa resep, stok, atau riwayat terkait sebelum menghapusnya.';
+    return { success: false, message };
+  }
+  if (error) throw error;
+  if (!data) return { success: false, message: 'Bahan baku tidak ditemukan di cabang ini atau Anda tidak memiliki izin untuk menghapusnya.' };
+
+  return { success: true, message: 'Bahan baku berhasil dihapus!' };
+}
+
 /**
  * Validasi nama bahan baku untuk mencegah input Script (XSS/HTML) dan perintah SQL (SQL Injection).
  * @param {string} name

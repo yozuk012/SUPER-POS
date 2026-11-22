@@ -19,9 +19,10 @@ export const getDiscountedPrice = (basePrice, discountPct) => {
 
 export const getRecommendedPrice = (hppPerUnit, marginPct = 50) => {
   const hpp = Number(hppPerUnit) || 0;
+  if (hpp <= 0) return 0;
   const margin = Number(marginPct) || 0;
   const calculatedPrice = hpp * (1 + margin / 100);
-  return Math.round(calculatedPrice / 500) * 500;
+  return Math.max(Math.round(calculatedPrice / 500), Math.ceil(hpp / 500)) * 500;
 };
 
 export const getOnlinePrice = (basePrice, markupPct = 0) => {
@@ -71,6 +72,27 @@ export const clampQuickDiscount = (amount, normalPrice) => {
  * (true), sehingga perilaku lamanya tidak berubah.
  */
 export const isStockUnlimited = (product) => product?.track_stock === false;
+
+export async function deleteProductRecord(supabase, id, storeId) {
+  if (!storeId) throw new Error('Toko produk tidak ditemukan.');
+
+  // Biarkan database menangani relasi dalam satu operasi, agar kegagalan tidak menghapus sebagian data.
+  const { data, error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id)
+    .eq('store_id', storeId)
+    .select('image_url')
+    .maybeSingle();
+
+  if (error?.code === '23503') {
+    throw new Error('Produk masih terkait dengan data lain dan tidak bisa dihapus. Nonaktifkan produk di halaman Produk agar tidak muncul di kasir.');
+  }
+  if (error) throw error;
+  if (!data) throw new Error('Produk tidak ditemukan atau Anda tidak memiliki izin untuk menghapusnya.');
+
+  return data;
+}
 
 /**
  * Deteksi error Postgres/PostgREST karena kolom belum ada di database —

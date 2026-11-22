@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
-import { convertPurchaseToBase, getUnitDefinition, validateRawMaterialName, parseNumberWithComma } from '@/lib/rawMaterialUtils';
+import { convertPurchaseToBase, deleteRawMaterial, getUnitDefinition, validateRawMaterialName, parseNumberWithComma } from '@/lib/rawMaterialUtils';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
 
 const isMissingPurchaseMetadata = (error) => (
@@ -291,25 +291,14 @@ export default function useBahanBaku() {
     setError(null);
 
     try {
-      const { error: deleteError } = await supabase
-        .from('raw_materials')
-        .delete()
-        .eq('id', id)
-        .eq('store_id', storeId);
-
-      if (deleteError) throw deleteError;
-
-      await supabase
-        .from('inventory')
-        .delete()
-        .eq('raw_material_id', id)
-        .eq('store_id', storeId);
-
-      await fetchBahanBaku();
-      return { success: true, message: 'Bahan baku berhasil dihapus!' };
+      const result = await deleteRawMaterial(supabase, id, storeId);
+      if (result.success) await fetchBahanBaku();
+      return result;
     } catch (err) {
-      console.error('Gagal menghapus bahan baku:', err);
-      return { success: false, message: err.message || 'Gagal menghapus bahan baku.' };
+      const message = err?.message || 'Terjadi kesalahan saat menghubungi database.';
+      const code = err?.code ? ` [${err.code}]` : '';
+      console.warn(`Gagal menghapus bahan baku${code}: ${message}`);
+      return { success: false, message: `${message}${code}` };
     } finally {
       setIsMutating(false);
     }

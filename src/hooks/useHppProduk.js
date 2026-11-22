@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
+import { deleteProductRecord } from '@/lib/productUtils';
 
 /**
  * Custom hook untuk mengelola daftar Produk & HPP
@@ -121,16 +122,7 @@ export default function useHppProduk() {
     setError(null);
 
     try {
-      // Catatan: Karena di schema database kita menggunakan ON DELETE CASCADE 
-      // pada tabel recipes dan recipe_ingredients, menghapus product 
-      // akan otomatis menghapus resep dan bahan-bahannya.
-      const { error: deleteError } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
-        .eq('store_id', storeId); // Keamanan: pastikan hanya hapus milik toko sendiri
-
-      if (deleteError) throw deleteError;
+      await deleteProductRecord(supabase, id, storeId);
 
       // Refresh data setelah berhasil dihapus
       await fetchProducts();

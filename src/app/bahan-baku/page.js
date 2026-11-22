@@ -41,7 +41,7 @@ export default function BahanBakuPage() {
   };
 
   const handleDelete = async (id) => {
-    const isConfirmed = window.confirm('Yakin ingin menghapus bahan baku ini? Data stok di inventory juga akan ikut terhapus.');
+    const isConfirmed = window.confirm('Yakin ingin menghapus bahan baku ini secara permanen? Jika berhasil, stok bahan ini tidak lagi tersedia di daftar.');
     if (!isConfirmed) return;
 
     const result = await deleteBahanBaku(id);

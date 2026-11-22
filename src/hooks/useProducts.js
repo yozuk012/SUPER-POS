@@ -5,7 +5,7 @@ import { supabase, uploadFile } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useConvert } from './useConvertImages';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
-import { getOnlinePrice, isMissingColumnError, isStockUnlimited } from '@/lib/productUtils';
+import { deleteProductRecord, getOnlinePrice, isMissingColumnError, isStockUnlimited } from '@/lib/productUtils';
 
 const UNSAFE_PRODUCT_NAME_PATTERNS = [
   /<\/?[a-z][^>]*>/i,
@@ -642,22 +642,17 @@ export function useProducts() {
   };
 
   const deleteProduct = async (id) => {
-    if (!window.confirm('Yakin ingin menghapus produk ini secara permanen?')) return;
-
     const productToDelete = products.find(p => p.id === id);
-    if (productToDelete?.image_url && !(await isImageStillUsed(productToDelete.image_url, productToDelete.id))) {
-      await deleteImageFromStorage(productToDelete.image_url);
-    }
+    if (!productToDelete || !window.confirm('Yakin ingin menghapus produk ini secara permanen?')) return;
 
-    await supabase.from('product_prices').delete().eq('product_id', id);
-    await supabase.from('inventory').delete().eq('product_id', id);
-    
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    
-    if (error) {
+    try {
+      const { image_url: imageUrl } = await deleteProductRecord(supabase, id, productToDelete.store_id);
+      if (imageUrl && !(await isImageStillUsed(imageUrl))) {
+        await deleteImageFromStorage(imageUrl);
+      }
+      await fetchProducts();
+    } catch (error) {
       alert('Gagal menghapus: ' + error.message);
-    } else {
-      fetchProducts();
     }
   };
 
