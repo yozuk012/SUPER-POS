@@ -36,7 +36,6 @@ export default function RegisterPage() {
     formData,
     logoPreview,
     error,
-    isSubmitting: loading,
     fieldErrors,
     hasFieldErrors,
     handleChange,
@@ -302,27 +301,14 @@ export default function RegisterPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={loading || hasFieldErrors}
+                disabled={hasFieldErrors}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-[0.99]"
               >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    Lanjut
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </>
-                )}
+                Lanjut
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </button>
               {hasFieldErrors && (
                 <p className="mt-2 text-xs text-center text-red-500">
@@ -366,7 +352,8 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={pinSetup.handleBack}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+              disabled={pinSetup.isSubmitting}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition disabled:opacity-50"
               aria-label="Kembali"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,6 +419,7 @@ export default function RegisterPage() {
                 required
                 value={pinSetup.pinData.pin}
                 onChange={pinSetup.handleChange}
+                disabled={pinSetup.isSubmitting}
                 className={pinInputClass}
                 placeholder="••••••"
                 maxLength={6}
@@ -458,6 +446,7 @@ export default function RegisterPage() {
                 required
                 value={pinSetup.pinData.confirmPin}
                 onChange={pinSetup.handleChange}
+                disabled={pinSetup.isSubmitting}
                 className={pinInputClass}
                 placeholder="••••••"
                 maxLength={6}
@@ -498,7 +487,7 @@ export default function RegisterPage() {
                       <path className="opacity-75" fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Menyimpan PIN...
+                    Mendaftarkan akun...
                   </>
                 ) : (
                   <>
@@ -511,14 +500,6 @@ export default function RegisterPage() {
               </button>
             </div>
 
-            {/* Skip */}
-            <button
-              type="button"
-              onClick={pinSetup.handleSkip}
-              className="w-full text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2 transition"
-            >
-              Lewati step ini (tidak direkomendasikan)
-            </button>
           </form>
         </main>
       </div>

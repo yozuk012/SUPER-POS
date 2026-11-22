@@ -82,7 +82,6 @@ export function useAuth() {
   // 3. REGISTER FORM STATE & LOGIC
   // ==========================================
   const [registerStep, setRegisterStep] = useState('form');
-  const [registeredUserId, setRegisteredUserId] = useState(null);
 
   const [regFormData, setRegFormData] = useState({
     fullName: '', email: '', phone: '', storeName: '', password: '', confirmPassword: '',
@@ -90,7 +89,6 @@ export function useAuth() {
   const [regLogoFile, setRegLogoFile] = useState(null);
   const [regLogoPreview, setRegLogoPreview] = useState(null);
   const [regError, setRegError] = useState(null);
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const [pinData, setPinData] = useState({ pin: '', confirmPin: '' });
   const [pinError, setPinError] = useState(null);
@@ -165,21 +163,18 @@ export function useAuth() {
   }, []);
 
   // ==========================================
-  // STEP 1: Submit Register (dengan validasi lengkap)
+  // STEP 1: Validasi data akun tanpa menyimpan
   // ==========================================
-  const submitRegister = useCallback(async (e) => {
+  const submitRegister = useCallback((e) => {
     if (e) e.preventDefault();
     setRegError(null);
 
-    // 🛑 Cek field errors dulu sebelum hit API
     if (hasFieldErrors) {
       // Ambil error pertama sebagai banner (opsional)
       const firstError = Object.values(regFieldErrors)[0];
       setRegError(firstError);
       return;
     }
-
-    setIsRegistering(true);
 
     try {
       // --- Validasi required ---
@@ -213,6 +208,34 @@ export function useAuth() {
       const storeBaseName = removeMainStoreSuffix(regFormData.storeName);
       if (!storeBaseName) throw new Error('Nama toko wajib diisi');
 
+      setRegisterStep('pin-setup');
+    } catch (err) {
+      setRegError(err.message);
+    }
+  }, [regFormData, regFieldErrors, hasFieldErrors]);
+
+  // ==========================================
+  // STEP 2: Validasi PIN dan simpan pendaftaran
+  // ==========================================
+  const submitRecoveryPin = useCallback(async (e) => {
+    if (e) e.preventDefault();
+    if (registerStep !== 'pin-setup' || isSettingPin) return;
+    setPinError(null);
+    setIsSettingPin(true);
+
+    try {
+      if (!pinData.pin) throw new Error('PIN wajib diisi');
+      if (!/^\d{6}$/.test(pinData.pin)) throw new Error('PIN harus 6 digit angka');
+      if (pinData.pin !== pinData.confirmPin) throw new Error('Konfirmasi PIN tidak cocok');
+
+      const simplePins = ['123456', '654321', '111111', '000000', '121212', '696969'];
+      if (simplePins.includes(pinData.pin)) {
+        throw new Error('PIN terlalu mudah ditebak. Gunakan kombinasi angka yang lebih aman.');
+      }
+
+      const hashedPin = await bcrypt.hash(pinData.pin, 10);
+      const storeBaseName = removeMainStoreSuffix(regFormData.storeName);
+
       // 1. Buat user di Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: regFormData.email.trim(),
@@ -244,6 +267,9 @@ export function useAuth() {
         phone: regFormData.phone || null,
         store_name: storeBaseName,
         store_logo_url: storeLogoUrl || null,
+        recovery_pin_hash: hashedPin,
+        pin_attempts: 0,
+        pin_locked_until: null,
       });
       if (merchantError) throw merchantError;
 
@@ -258,101 +284,32 @@ export function useAuth() {
       });
       if (storeError) throw storeError;
 
-      // 5. Lanjut ke step PIN
-      setRegisteredUserId(authData.user.id);
-      setRegisterStep('pin-setup');
-
       setRegFormData({ fullName: '', email: '', phone: '', storeName: '', password: '', confirmPassword: '' });
       setRegLogoFile(null);
       setRegLogoPreview(null);
 
-    } catch (err) {
-      console.warn('Register warning:', err.message);
-      setRegError(err.message);
-    } finally {
-      setIsRegistering(false);
-    }
-  }, [regFormData, regLogoFile, regFieldErrors, hasFieldErrors]);
-
-  // ==========================================
-  // STEP 2: Submit Recovery PIN
-  // ==========================================
-  const submitRecoveryPin = useCallback(async (e) => {
-    if (e) e.preventDefault();
-    setPinError(null);
-    setIsSettingPin(true);
-
-    try {
-      if (!pinData.pin) throw new Error('PIN wajib diisi');
-      if (pinData.pin.length !== 6) throw new Error('PIN harus 6 digit angka');
-      if (pinData.pin !== pinData.confirmPin) throw new Error('Konfirmasi PIN tidak cocok');
-      if (!registeredUserId) throw new Error('Sesi registrasi tidak valid. Silakan daftar ulang.');
-
-      const simplePins = ['123456', '654321', '111111', '000000', '121212', '696969'];
-      if (simplePins.includes(pinData.pin)) {
-        throw new Error('PIN terlalu mudah ditebak. Gunakan kombinasi angka yang lebih aman.');
-      }
-
-      const hashedPin = await bcrypt.hash(pinData.pin, 10);
-
-      const { error: updateError } = await supabase
-        .from('merchants')
-        .update({
-          recovery_pin_hash: hashedPin,
-          pin_attempts: 0,
-          pin_locked_until: null,
-        })
-        .eq('id', registeredUserId);
-
-      if (updateError) throw updateError;
-
       alert('🎉 Registrasi berhasil!\n\nPIN Pemulihan telah disimpan.\nSilakan login dengan email dan password Anda.\n\n📌 PENTING: Simpan PIN Anda di tempat aman!');
 
       setRegisterStep('form');
-      setRegisteredUserId(null);
       setPinData({ pin: '', confirmPin: '' });
 
       markOnboardingCompleted();
       router.push('/auth/login');
 
     } catch (err) {
-      console.warn('Setup PIN warning:', err.message);
+      console.warn('Register warning:', err.message);
       setPinError(err.message);
     } finally {
       setIsSettingPin(false);
     }
-  }, [pinData, registeredUserId, router]);
-
-  const skipPinSetup = useCallback(async () => {
-    if (!registeredUserId) return;
-    const confirm = window.confirm(
-      '⚠️ PERINGATAN!\n\n' +
-      'Jika Anda skip setup PIN sekarang, Anda TIDAK BISA mereset password sendiri jika lupa.\n' +
-      'Anda harus menghubungi CS untuk bantuan.\n\n' +
-      'Yakin ingin melewati step ini?'
-    );
-    if (!confirm) return;
-
-    setRegisterStep('form');
-    setRegisteredUserId(null);
-    setPinData({ pin: '', confirmPin: '' });
-    markOnboardingCompleted();
-    router.push('/auth/login');
-  }, [registeredUserId, router]);
+  }, [registerStep, isSettingPin, pinData, regFormData, regLogoFile, router]);
 
   const backToRegisterForm = useCallback(() => {
-    const confirm = window.confirm(
-      'Kembali ke form registrasi akan membatalkan pendaftaran.\n' +
-      'Anda harus mendaftar ulang dari awal.\n\n' +
-      'Lanjutkan?'
-    );
-    if (confirm) {
-      setRegisterStep('form');
-      setRegisteredUserId(null);
-      setPinData({ pin: '', confirmPin: '' });
-      setPinError(null);
-    }
-  }, []);
+    if (isSettingPin) return;
+    setRegisterStep('form');
+    setPinData({ pin: '', confirmPin: '' });
+    setPinError(null);
+  }, [isSettingPin]);
 
   // ==========================================
   // 4. LOGIN
@@ -406,7 +363,6 @@ export function useAuth() {
         const merchantData = await fetchMerchant(data.user.id);
 
         if (merchantData && !merchantData.recovery_pin_hash) {
-          setRegisteredUserId(data.user.id);
           router.push('/auth/setup-pin');
           return;
         }
@@ -506,7 +462,6 @@ export function useAuth() {
       logoFile: regLogoFile,
       logoPreview: regLogoPreview,
       error: regError,
-      isSubmitting: isRegistering,
 
       // 🔥 BARU — field-level errors & flag
       fieldErrors: regFieldErrors,
@@ -517,13 +472,11 @@ export function useAuth() {
       handleSubmit: submitRegister,
 
       pinSetup: {
-        userId: registeredUserId,
         pinData: pinData,
         error: pinError,
         isSubmitting: isSettingPin,
         handleChange: handlePinChange,
         handleSubmit: submitRecoveryPin,
-        handleSkip: skipPinSetup,
         handleBack: backToRegisterForm,
       },
     },
