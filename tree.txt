@@ -1,19 +1,4 @@
 super-pos
-├── .clinerules
-│   └── ponytail.md
-├── artifacts
-│   └── blackbox
-│       ├── downloads
-│       │   ├── Toko Tes - Cabang Utama Backups Full (1).xlsx
-│       │   ├── Toko Tes - Cabang Utama Backups Full (2).xlsx
-│       │   ├── Toko Tes - Cabang Utama Backups Full (3).xlsx
-│       │   └── Toko Tes - Cabang Utama Backups Full.xlsx
-│       ├── fixtures
-│       │   └── produk-uji.png
-│       ├── screenshots
-│       │   ├── 8QQXUQ-STK-02-fail.png
-│       │   └── 8REWC7-PRD-03-fail.png
-│       └── selenium-report.json
 ├── public
 │   ├── icons
 │   │   ├── apple-touch-icon.png
@@ -25,8 +10,9 @@ super-pos
 │   ├── logo-SP.png
 │   └── sw.js
 ├── scripts
-│   └── blackbox
-│       └── selenium-blackbox.js
+│   ├── blackbox
+│   │   └── selenium-blackbox.js
+│   └── audit-script.js
 ├── src
 │   ├── app
 │   │   ├── api
@@ -169,8 +155,10 @@ super-pos
 │   │   ├── AUDIT.md
 │   │   ├── BLACKBOX-REPORT.md
 │   │   ├── BLACKBOX-TEST.md
+│   │   ├── checkout-sale.sql
 │   │   ├── DATABASE.MD
 │   │   ├── PANDUAN.txt
+│   │   ├── PROBLEM.MD
 │   │   ├── RELATION.md
 │   │   └── TEMPLATE SHEETS.txt
 │   ├── components
@@ -206,6 +194,7 @@ super-pos
 │   │   └── useTransaction.js
 │   ├── lib
 │   │   ├── activeStore.js
+│   │   ├── checkout.js
 │   │   ├── copyStoreData.js
 │   │   ├── dateUtils.js
 │   │   ├── formatUtils.js
@@ -343,7 +332,6 @@ super-pos
 ├── .env.local
 ├── .env.production
 ├── .gitignore
-├── audit-script.js
 ├── eslint.config.mjs
 ├── jsconfig.json
 ├── next.config.mjs
