@@ -51,6 +51,20 @@ export default function TransactionPage() {
         </div>
       </div>
 
+      {transaction.pendingCheckout && (
+        <div role="status" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>Ada transaksi yang belum mendapat konfirmasi. Periksa dan lanjutkan transaksi ini sebelum membuat pembayaran baru. Jangan meminta pelanggan membayar lagi.</p>
+          <button
+            type="button"
+            disabled={transaction.isProcessing}
+            onClick={() => transaction.confirmPayment()}
+            className="mt-2 rounded-lg bg-amber-800 px-4 py-2 font-bold text-white disabled:opacity-50"
+          >
+            {transaction.isProcessing ? 'Memeriksa Transaksi...' : 'Periksa & Lanjutkan Transaksi'}
+          </button>
+        </div>
+      )}
+
       {/* ═══ TOGGLE MOBILE ═══ */}
       <div className="md:hidden flex gap-2 mb-3">
         <button

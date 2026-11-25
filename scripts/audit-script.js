@@ -2,7 +2,7 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const REPORT_PATH = path.join(__dirname, 'src', 'blueprint', 'AUDIT.md');
+const REPORT_PATH = path.join(__dirname, '..', 'src', 'blueprint', 'AUDIT.md');
 
 function runEslint() {
   return new Promise((resolve, reject) => {
@@ -92,6 +92,7 @@ async function main() {
     const results = await runEslint();
     const markdown = formatResults(results);
     
+    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
     fs.writeFileSync(REPORT_PATH, markdown, 'utf8');
     console.log(`✅ Laporan audit disimpan di: ${REPORT_PATH}`);
     

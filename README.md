@@ -220,7 +220,7 @@ di bagian atas file tersebut agar cache pengguna lama dibuang dan diisi ulang.
   memblokir halaman privat aplikasi, `/offline`, serta `/api/`.
 - **`src/app/sitemap.js`** → `/sitemap.xml`. Hanya berisi halaman publik
   ber-konten: `/welcome`, `/auth/register`, `/auth/login`.
-- **`src/middleware.js`** — menambahkan header `X-Robots-Tag: noindex, nofollow`
+- **`src/proxy.js`** — menambahkan header `X-Robots-Tag: noindex, nofollow`
   untuk halaman privat (dashboard, produk, transaksi, HPP, settings, dll.)
   sebagai lapisan pengaman selain `robots.txt`.
 - **Metadata per halaman** dipasang lewat `layout.js` per segmen
@@ -296,7 +296,7 @@ my-pos/
 │  │  ├─ product/                 # Master produk
 │  │  ├─ report/                  # Laporan penjualan & laba rugi
 │  │  ├─ settings/profile/        # Profil, toko, backup, seed, dll.
-│  │  ├─ transection/             # Halaman kasir (penulisan asli: transection)
+│  │  ├─ transaksi/               # Halaman kasir (penulisan asli: transaksi)
 │  │  ├─ welcome/                 # Onboarding pertama kali
 │  │  ├─ test-connection/         # Diagnostik koneksi Supabase
 │  │  ├─ manifest.js              # Manifest PWA
@@ -307,7 +307,7 @@ my-pos/
 │  ├─ components/                 # PageLayout, Sidebar, modal global, PWAProvider, StructuredData
 │  ├─ hooks/                      # Logika domain (auth, produk, transaksi, HPP, dll.)
 │  ├─ lib/                        # Supabase client, active store, struk, backup, seed, site.js
-│  ├─ middleware.js               # Header X-Robots-Tag noindex untuk halaman privat
+│  ├─ proxy.js                    # Header X-Robots-Tag noindex untuk halaman privat
 │  ├─ seeds/                      # Katalog & gambar produk contoh
 │  └─ blueprint/                  # Dokumentasi skema DB & panduan aplikasi
 ├─ next.config.mjs
@@ -454,6 +454,26 @@ NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
 5. Atur **Auth URL Configuration** (Site URL dan Redirect URLs) ke domain aplikasi,
    misalnya `http://localhost:3000` untuk development.
 6. Jika mode konfirmasi email aktif, konfirmasi email pengguna sebelum login.
+
+### Checkout atomik
+
+Sebelum memakai checkout, jalankan migrasi lokal `src/blueprint/checkout-sale.sql`
+melalui Supabase SQL Editor. File ini disimpan bersama dokumentasi database privat.
+Migrasi membuat RPC `checkout_sale` pada schema `public` dan `dev` yang memiliki
+tabel `sales`. Pastikan hak akses tabel/sequence dan RLS untuk user `authenticated`
+mengizinkan penulisan `sales`, `sale_items`, serta pembaruan `inventory` milik tokonya.
+
+Checkout menyimpan nota, item, dan stok dalam satu transaksi database. Jika salah
+satu langkah gagal, seluruh perubahan dibatalkan. Jika respons jaringan hilang,
+halaman kasir menampilkan **Periksa & Lanjutkan Transaksi**; percobaan ulang memakai
+ID checkout yang sama agar nota dan pemotongan stok tidak dibuat dua kali.
+Checkout yang belum terkonfirmasi disimpan di browser per akun dan toko. Gunakan
+browser yang sama untuk melanjutkannya dan jangan hapus data situs sebelum selesai.
+Mekanisme ini tidak memproses pembayaran baru saat offline.
+
+Uji helper checkout dengan `node --test scripts/checkout.test.mjs`. Pengujian ini
+memeriksa penanganan respons hilang dan struk; rollback SQL tetap perlu diuji pada
+database development setelah migrasi diterapkan.
 
 ### 4. Siapkan Supabase Storage
 
@@ -619,7 +639,7 @@ namun masih dinonaktifkan (bertanda “Segera Hadir”).
 | `/bahan-baku` | Master bahan baku |
 | `/hpp/hitung-hpp` | Kalkulator HPP |
 | `/hpp/hppproduk` | Daftar HPP produk |
-| `/transection` | Kasir / transaksi |
+| `/tra` | Kasir / transaksi |
 | `/history` | Riwayat transaksi |
 | `/report` | Laporan penjualan dan laba rugi |
 | `/pengeluaran` | Biaya operasional |

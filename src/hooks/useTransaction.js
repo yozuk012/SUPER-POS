@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, isMainStore, resolveActiveStore } from '@/lib/activeStore';
 import { isMissingColumnError, isStockUnlimited } from '@/lib/productUtils';
+import { buildCheckoutReceipt, checkoutStorageKey, submitCheckout } from '@/lib/checkout';
 
 // Kolom yang diambil untuk katalog kasir. `track_stock` (stok tanpa batas)
 // hanya ikut diminta bila kolomnya sudah ada di database, supaya fitur lama
@@ -49,6 +50,8 @@ export default function useTransaction() {
   // UI States
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
+  const checkoutInFlight = useRef(false);
   const [storeQrisUrl, setStoreQrisUrl] = useState(null);
 
   // State Modul Struk
@@ -75,6 +78,7 @@ export default function useTransaction() {
         setProducts([]);
         setCategories([]);
         setCartItems([]);
+        setPendingCheckout(null);
         return;
       }
 
@@ -100,6 +104,8 @@ export default function useTransaction() {
       setStoreId(storeData.id);
       setStoreName(storeData.name || '');
       setIsMainBranch(isMainStore(storeData, stores));
+      const savedCheckout = window.localStorage.getItem(checkoutStorageKey(user.id, storeData.id));
+      setPendingCheckout(savedCheckout ? JSON.parse(savedCheckout) : null);
 
       const { data: merchantData } = await supabase
         .from('merchants')
@@ -235,6 +241,7 @@ export default function useTransaction() {
   // 4. CART LOGIC (DENGAN VALIDASI STOK)
   // ==========================================
   const addToCart = (product) => {
+    if (pendingCheckout || checkoutInFlight.current) return;
     const stockTracked = !isStockUnlimited(product);
     const availableStock = Number(product.stock) || 0;
 
@@ -306,6 +313,7 @@ export default function useTransaction() {
   // laporan keuangan, dan struk.
   // ==========================================
   const updateQty = (productId, newQty) => {
+    if (pendingCheckout || checkoutInFlight.current) return;
     if (newQty <= 0) {
       removeItem(productId);
       return;
@@ -341,10 +349,12 @@ export default function useTransaction() {
   };
 
   const removeItem = (productId) => {
+    if (pendingCheckout || checkoutInFlight.current) return;
     setCartItems(prev => prev.filter(item => item.id !== productId));
   };
 
   const clearCart = () => {
+    if (pendingCheckout || checkoutInFlight.current) return;
     setCartItems([]);
     setDiscount(0);
     setCustomerName('');
@@ -370,6 +380,7 @@ export default function useTransaction() {
   // 6. CHECKOUT & DATABASE INSERT
   // ==========================================
   const handleCheckout = () => {
+    if (pendingCheckout || checkoutInFlight.current) return;
     if (cartItems.length === 0) return;
     setIsPaymentModalOpen(true);
   };
@@ -381,103 +392,79 @@ export default function useTransaction() {
     }
   };
 
-  const confirmPayment = async (paymentData) => {
+  const confirmPayment = async (paymentData = {}) => {
+    if (checkoutInFlight.current || !user?.id || !storeId) return;
+    if (!pendingCheckout && cartItems.length === 0) return;
+    checkoutInFlight.current = true;
     setIsProcessing(true);
     try {
       const finalChannel = channel;
-      const amountPaid = Number(paymentData.amount_paid) || grandTotal;
+      const amountPaid = Number(paymentData.amount_paid ?? grandTotal);
       const change = Math.max(0, amountPaid - grandTotal);
 
-      const { data: saleData, error: saleError } = await supabase
-        .from('sales')
-        .insert([{
-          store_id: storeId,
-          sale_date: new Date().toISOString(),
-          channel: finalChannel,
-          payment_method: paymentData.payment_method,
-          subtotal: subtotal,
-          discount: totalDiscount,
-          platform_fee: platformFee,
-          grand_total: grandTotal,
-          notes: customerName ? `Customer: ${customerName}` : 'Umum',
-          qris_reference: paymentData.reference_number || null,
-          qris_status: paymentData.qris_status || null,
-          qris_paid_at: paymentData.qris_paid_at || null
-        }])
-        .select()
-        .single();
-
-      if (saleError) throw saleError;
-
-      const itemsToInsert = cartItems.map(item => ({
-        sale_id: saleData.id,
-        product_id: item.id,
-        qty: item.qty,
-        unit_price: item.unit_price,
-        hpp_snapshot: item.hpp, 
-        line_total: item.line_total
-      }));
-
-      const { error: itemsError } = await supabase.from('sale_items').insert(itemsToInsert);
-      if (itemsError) throw itemsError;
-
-      // Update Stok (Inventory) — produk dengan stok tanpa batas
-      // (track_stock = false) dilewati karena stoknya memang tidak dilacak.
-      for (const item of cartItems) {
-        if (isStockUnlimited(item)) continue;
-
-        const { data: currentStock } = await supabase
-          .from('inventory')
-          .select('qty_on_hand')
-          .eq('store_id', storeId)
-          .eq('product_id', item.id)
-          .single();
-
-        const currentQty = currentStock?.qty_on_hand || 0;
-        const newQty = Math.max(0, currentQty - item.qty);
-
-        await supabase
-          .from('inventory')
-          .update({ qty_on_hand: newQty, last_updated: new Date().toISOString() })
-          .eq('store_id', storeId)
-          .eq('product_id', item.id);
+      const pendingKey = checkoutStorageKey(user.id, storeId);
+      let checkout = JSON.parse(window.localStorage.getItem(pendingKey) || 'null');
+      if (!checkout) {
+        checkout = {
+          requestId: crypto.randomUUID(),
+          cartItems: structuredClone(cartItems),
+          sale: {
+            store_id: storeId, channel: finalChannel,
+            payment_method: paymentData.payment_method,
+            subtotal, discount: totalDiscount, platform_fee: platformFee, grand_total: grandTotal,
+            notes: customerName ? `Customer: ${customerName}` : 'Umum',
+            qris_reference: paymentData.reference_number || null,
+            qris_status: paymentData.qris_status || null,
+            qris_paid_at: paymentData.qris_paid_at || null,
+          },
+          items: cartItems.map(item => ({
+            product_id: item.id, qty: item.qty, unit_price: item.unit_price,
+            hpp_snapshot: item.hpp, line_total: item.line_total,
+          })),
+          receipt: {
+            store: storeInfo, customer_name: customerName.trim() || '-',
+            items: cartItems.map(item => ({
+              name: item.name, qty: item.qty, unit_price: item.unit_price,
+              line_total: item.line_total, original_unit_price: item.base_unit_price ?? item.unit_price,
+            })),
+            amount_paid: amountPaid, change,
+          },
+        };
+        window.localStorage.setItem(pendingKey, JSON.stringify(checkout));
       }
-
-      const newReceiptData = {
-        store: storeInfo,
-        transaction_id: `TRX-${saleData.id}`, 
-        date: new Date(saleData.sale_date).toLocaleString('id-ID', {
-          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        }),
-        customer_name: customerName.trim() !== '' ? customerName : '-',
-        items: cartItems.map(item => ({
-          name: item.name,
-          qty: item.qty,
-          unit_price: item.unit_price,
-          line_total: item.line_total,
-          // Harga normal per unit — kini sama dengan unit_price karena Diskon
-          // Cepat dihitung pada level transaksi (bukan per item).
-          original_unit_price: Number(item.base_unit_price) || Number(item.unit_price) || 0
-        })),
-        subtotal: subtotal,
-        discount: totalDiscount,
-        grand_total: grandTotal,
-        amount_paid: amountPaid,
-        // Diskon Cepat (level transaksi) diinformasikan terpisah di struk.
-        total_savings: totalSavings,
-        change: change,
-        payment_method: paymentData.payment_method
-      };
+      setPendingCheckout(checkout);
+      let saleData;
+      try {
+        saleData = await submitCheckout(supabase, checkout);
+      } catch (error) {
+        if (error.rolledBack) {
+          window.localStorage.removeItem(pendingKey);
+          setPendingCheckout(null);
+          setCartItems(checkout.cartItems);
+          setCustomerName(checkout.receipt.customer_name === '-' ? '' : checkout.receipt.customer_name);
+          setDiscount(checkout.sale.discount);
+          setChannel(checkout.sale.channel);
+        }
+        throw error;
+      }
+      const newReceiptData = buildCheckoutReceipt(checkout, saleData);
+      window.localStorage.removeItem(pendingKey);
+      setPendingCheckout(null);
 
       setIsPaymentModalOpen(false);
       setReceiptData(newReceiptData);
-      clearCart();
+      setCartItems([]);
+      setDiscount(0);
+      setCustomerName('');
       fetchProducts(); 
 
     } catch (error) {
       console.error('❌ Error saat checkout:', error);
-      alert('Gagal memproses transaksi: ' + error.message);
+      setIsPaymentModalOpen(false);
+      alert((error.rolledBack ? 'Transaksi dibatalkan tanpa perubahan data: ' :
+        'Status transaksi belum dapat dipastikan. Jangan buat pembayaran baru; gunakan Periksa & Lanjutkan Transaksi. ') + error.message);
     } finally {
+      checkoutInFlight.current = false;
       setIsProcessing(false);
     }
   };
@@ -524,6 +511,7 @@ export default function useTransaction() {
     closePaymentModal,
     confirmPayment,
     isProcessing,
+    pendingCheckout,
     storeQrisUrl,
     storeInfo,
     receiptData,

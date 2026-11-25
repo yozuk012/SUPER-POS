@@ -9,12 +9,12 @@ import { NextResponse } from "next/server";
  *
  * Catatan: redirect antar-domain (apex ↔ www) TIDAK dilakukan di sini. Vercel
  * menormalkan header `Host` ke domain utama, sehingga pengecekan host di
- * middleware bisa memicu redirect berulang (loop). Atur redirect tersebut di
+ * proxy bisa memicu redirect berulang (loop). Atur redirect tersebut di
  * Project → Settings → Domains.
  */
 const NOINDEX_VALUE = "noindex, nofollow";
 
-export function middleware() {
+export function proxy() {
   const response = NextResponse.next();
   response.headers.set("X-Robots-Tag", NOINDEX_VALUE);
   return response;

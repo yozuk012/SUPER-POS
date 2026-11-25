@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-globals */
 /**
  * Service Worker SuperPOS.
  *

@@ -339,7 +339,7 @@ super-pos
 │   │   │   ├── tetelan_ikan_dori_frozen.jpg
 │   │   │   └── usus_ayam_bersih_frozen.jpg
 │   │   └── data.json
-│   └── middleware.js
+│   └── proxy.js
 ├── .env.local
 ├── .env.production
 ├── .gitignore

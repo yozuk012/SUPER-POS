@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "audit": "node audit-script.js",
+    "audit": "node scripts/audit-script.js",
     "test:blackbox": "node scripts/blackbox/selenium-blackbox.js"
   },
   "dependencies": {
