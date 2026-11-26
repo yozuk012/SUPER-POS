@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+dialog:modal {
+	overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+	overflow: hidden;
+	overscroll-behavior: contain;
+	background: rgb(15 23 42 / 50%);
+}
