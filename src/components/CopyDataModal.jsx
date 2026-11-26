@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { useOwnerStores } from '@/hooks/stores/useOwnerStores';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { getActiveStoreId } from '@/lib/activeStore';
 import { fetchItemsForCopy, executeCopyStoreData } from '@/lib/copyStoreData';
 import { FiCopy, FiX, FiSearch, FiCheckSquare, FiSquare, FiArrowRight, FiCheck } from 'react-icons/fi';
@@ -11,7 +11,7 @@ import { FiCopy, FiX, FiSearch, FiCheckSquare, FiSquare, FiArrowRight, FiCheck }
 export default function CopyDataModal({ isOpen, onClose, type, title, onCopySuccess }) {
   const { user } = useAuth();
 
-  const [stores, setStores] = useState([]);
+  const { stores, error: storesError } = useOwnerStores(user?.id, { activeOnly: true, enabled: isOpen });
   const [sourceStoreId, setSourceStoreId] = useState('');
   const [targetStoreId, setTargetStoreId] = useState('');
 
@@ -32,30 +32,17 @@ export default function CopyDataModal({ isOpen, onClose, type, title, onCopySucc
       setSearchQuery('');
       setCategoryFilter('all');
       setStatusMessage(null);
-      try {
-        const { data, error } = await supabase
-          .from('stores')
-          .select('id, name, is_active')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .order('name');
-
-        if (error) throw error;
-        setStores(data || []);
-
-        const activeId = getActiveStoreId();
-        const initialTargetId = activeId || (data?.[0]?.id ? String(data[0].id) : '');
-        setTargetStoreId(initialTargetId);
-
-        const otherStore = (data || []).find((s) => String(s.id) !== String(initialTargetId));
-        setSourceStoreId(otherStore ? String(otherStore.id) : '');
-      } catch (err) {
-        console.error('Gagal mengambil daftar toko:', err);
-      }
+      const activeId = getActiveStoreId();
+      const initialTargetId = stores.some(store => String(store.id) === String(activeId))
+        ? activeId : (stores[0]?.id ? String(stores[0].id) : '');
+      setTargetStoreId(initialTargetId);
+      const otherStore = stores.find(store => String(store.id) !== String(initialTargetId));
+      setSourceStoreId(otherStore ? String(otherStore.id) : '');
+      if (storesError) setStatusMessage({ type: 'error', text: storesError });
     };
 
     fetchUserStores();
-  }, [isOpen, user?.id]);
+  }, [isOpen, user?.id, stores, storesError]);
 
   useEffect(() => {
     let isMounted = true;

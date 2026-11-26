@@ -87,7 +87,7 @@ export default function BackupHistoryTable({
   };
 
   // Nama file unduhan: "<Nama Toko> Backups <Jenis Data> <tanggal>.xlsx"
-  // fileLabel disamakan dengan SCOPE_LABELS di hooks/useBackupsData.js agar
+  // fileLabel disamakan dengan SCOPE_LABELS di hooks/backups/useBackupsData.js agar
   // konsisten dengan nama file hasil ekspor.
   const buildDownloadName = (backup) => {
     const typeInfo = getTypeInfo(backup.backup_type);

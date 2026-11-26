@@ -6,11 +6,13 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiHelpCircle } from 'react-icons/fi';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useLoginForm } from '@/hooks/auth/useLoginForm';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginForm, user, loading } = useAuth();
+  const { user, loading } = useAuth();
+  const loginForm = useLoginForm();
   const { fieldErrors, hasFieldErrors } = loginForm;
 
   // Pengguna yang masih punya sesi aktif tidak perlu melihat form login.

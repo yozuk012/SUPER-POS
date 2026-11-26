@@ -2,7 +2,7 @@
 
 import { FiArrowLeft, FiUser, FiTrendingUp, FiAlertCircle, FiCheckCircle, FiPackage, FiDollarSign, FiInfo, FiEye, FiX } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
-import useGlobalOnlineMarkup from '@/hooks/useGlobalOnlineMarkup';
+import useGlobalOnlineMarkup from '@/hooks/settings/useGlobalOnlineMarkup';
 
 // Helper: Format Rupiah
 const formatRupiah = (number) => {

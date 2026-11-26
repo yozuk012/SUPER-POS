@@ -1,22 +1,23 @@
 // src/app/settings/profile/stores/page.js
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useStoreManagement } from '@/hooks/useAddStore';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useOwnerStores } from '@/hooks/stores/useOwnerStores';
+import { useStoreManagement } from '@/hooks/stores/useAddStore';
 
 import PageLayout from '@/components/PageLayout';
 import StoreHeader from './components/StoreHeader';
 import StoreList from './components/StoreList';
 import StoreFormModal from './components/StoreFormModal';
 import ActionDialog from './components/ActionDialog';
-import { getActiveStoreId, setActiveStoreId, ACTIVE_STORE_EVENT } from '@/lib/activeStore';
+import { getActiveStoreId, setActiveStoreId, ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
 
 export default function StoresSettingsPage() {
   const storeHook = useStoreManagement();
 
-  const [stores, setStores] = useState([]);
-  const [isFetching, setIsFetching] = useState(true);
+  const { user } = useAuth();
+  const { stores, loading: isFetching, refresh: fetchStores } = useOwnerStores(user?.id, { newestFirst: true });
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
@@ -31,38 +32,6 @@ export default function StoresSettingsPage() {
 
   const [backupDates, setBackupDates] = useState({ from: '', to: '' });
 
-  const fetchStores = useCallback(async () => {
-    setIsFetching(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const mappedStores = data.map((s) => ({
-        ...s,
-        status: s.is_active ? 'active' : 'inactive',
-      }));
-
-      setStores(mappedStores);
-    } catch (err) {
-      console.error('Error fetching stores:', err);
-    } finally {
-      setIsFetching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- ambil daftar toko saat mount
-    fetchStores();
-  }, [fetchStores]);
-
   useEffect(() => {
     const handleStoreChange = (event) => setActiveStoreIdState(event.detail || getActiveStoreId());
     window.addEventListener(ACTIVE_STORE_EVENT, handleStoreChange);
@@ -71,7 +40,6 @@ export default function StoresSettingsPage() {
 
   useEffect(() => {
     if (storeHook.successMsg) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh daftar toko setelah simpan add/update berhasil
       fetchStores();
       if (isFormModalOpen) {
         setTimeout(() => setIsFormModalOpen(false), 1500);
@@ -148,11 +116,8 @@ export default function StoresSettingsPage() {
   const maxLimit = 10;
 
   const effectiveActiveStoreId = useMemo(() => {
-    const matched = stores.find((s) => String(s.id) === String(activeStoreId));
-    if (matched && matched.is_active) return String(matched.id);
-
-    const firstActive = stores.find((s) => s.is_active);
-    return firstActive ? String(firstActive.id) : null;
+    const activeStore = resolveActiveStore(stores, activeStoreId);
+    return activeStore ? String(activeStore.id) : null;
   }, [stores, activeStoreId]);
 
   const orderedStores = useMemo(() => {

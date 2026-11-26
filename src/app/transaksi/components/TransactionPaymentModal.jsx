@@ -20,16 +20,8 @@ import {
   FiX
 } from 'react-icons/fi';
 import { parseNumberUI } from '@/lib/productUtils';
-import {
-  buildQrisFileName,
-  buildQrisReferenceNumber,
-  buildQrisShareText,
-  copyTextToClipboard,
-  downloadQrisPaymentCard,
-  generateQrisPaymentCardFile,
-  isQrisFileShareSupported,
-  shareQris,
-} from '@/lib/qrisShare';
+import { buildQrisReferenceNumber } from '@/lib/qrisShare';
+import { useQrisSharing } from '@/hooks/transactions/useQrisSharing';
 
 export default function TransactionPaymentModal({
   isOpen,
@@ -48,13 +40,10 @@ export default function TransactionPaymentModal({
   const [qrisConfirmed, setQrisConfirmed] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  // State fitur bagikan QRIS sebagai gambar (WhatsApp / media sosial)
-  const [shareFeedback, setShareFeedback] = useState(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
-  // Pratinjau kartu QRIS (gambar yang akan dikirim ke pelanggan)
-  const [preview, setPreview] = useState({ key: '', url: '', file: null });
-  const [isFileShareSupported] = useState(() => isQrisFileShareSupported());
+  const { shareFeedback, isSharing, shareCopied, previewUrl, isFileShareSupported,
+    canShareQrisImage, handleShareQris, handleDownloadQrisCard, handleCopyQrisDetails } = useQrisSharing({
+    isOpen, paymentMethod, storeQrisUrl, referenceNumber, grandTotal, customerName, storeInfo,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -68,53 +57,8 @@ export default function TransactionPaymentModal({
       setQrisConfirmed(false);
       setImageError(false);
       setCopySuccess(false);
-      setShareFeedback(null);
-      setIsSharing(false);
-      setShareCopied(false);
-      setPreview({ key: '', url: '', file: null });
     }
   }, [isOpen]);
-
-  // Kunci pratinjau: kartu digambar ulang setiap isi transaksi berubah.
-  const previewKey = [
-    storeQrisUrl,
-    grandTotal,
-    referenceNumber,
-    customerName,
-    storeInfo?.name,
-  ].join('|');
-
-  // Pratinjau gambar kartu QRIS yang nanti dibagikan ke pelanggan.
-  useEffect(() => {
-    if (!isOpen || paymentMethod !== 'qris' || !storeQrisUrl || !referenceNumber || !(grandTotal > 0)) {
-      return undefined;
-    }
-
-    let active = true;
-    let objectUrl = '';
-
-    generateQrisPaymentCardFile({
-      url: storeQrisUrl,
-      storeName: storeInfo?.name,
-      amount: grandTotal,
-      customerName,
-      referenceNumber,
-      fileName: buildQrisFileName(storeInfo?.name, referenceNumber),
-    }).then((file) => {
-      if (!active || !file) return;
-      objectUrl = URL.createObjectURL(file);
-      setPreview({ key: previewKey, url: objectUrl, file });
-    });
-
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [isOpen, paymentMethod, previewKey, storeQrisUrl, grandTotal, customerName, referenceNumber, storeInfo?.name]);
-
-  const previewUrl = preview.key === previewKey ? preview.url : '';
-  // File kartu yang sudah siap dipakai ulang saat tombol bagikan ditekan.
-  const previewCardFile = preview.key === previewKey ? preview.file : null;
 
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -145,85 +89,6 @@ export default function TransactionPaymentModal({
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  // ── Bagikan QRIS sebagai GAMBAR (QRIS + nominal + nomor transaksi) ──────
-  const canShareQrisImage = Boolean(storeQrisUrl) && grandTotal > 0;
-
-  const getQrisShareText = () =>
-    buildQrisShareText({
-      storeName: storeInfo?.name,
-      amount: grandTotal,
-      customerName,
-      referenceNumber,
-    });
-
-  const getQrisCardPayload = () => ({
-    url: storeQrisUrl,
-    storeName: storeInfo?.name,
-    amount: grandTotal,
-    customerName,
-    referenceNumber,
-    date: new Date(),
-    fileName: buildQrisFileName(storeInfo?.name, referenceNumber),
-  });
-
-  const showShareFeedback = (tone, message) => {
-    setShareFeedback({ tone, message });
-    setTimeout(() => setShareFeedback(null), 6000);
-  };
-
-  const handleShareQris = async () => {
-    if (!canShareQrisImage || isSharing) return;
-
-    setIsSharing(true);
-    try {
-      const result = await shareQris({
-        ...getQrisCardPayload(),
-        cardFile: previewCardFile,
-        title: `Pembayaran QRIS ${formatRupiah(grandTotal)}`,
-        text: getQrisShareText(),
-      });
-
-      if (result.status === 'shared') {
-        showShareFeedback('success', 'Gambar QRIS (nominal + nomor transaksi) berhasil dibagikan.');
-      } else if (result.status === 'fallback') {
-        const langkah = [];
-        if (result.downloaded) langkah.push('gambar QRIS diunduh');
-        if (result.copied) langkah.push('caption tagihan disalin');
-
-        showShareFeedback(
-          'info',
-          langkah.length > 0
-            ? `Perangkat ini belum punya menu bagikan gambar langsung — ${langkah.join(' dan ')}. Tinggal lampirkan gambarnya di WhatsApp/media sosial.`
-            : 'Gunakan tombol Unduh Gambar, lalu lampirkan gambarnya di WhatsApp/media sosial.'
-        );
-      } else if (result.status === 'failed') {
-        showShareFeedback('error', 'Gagal membagikan gambar QRIS. Coba tombol Unduh Gambar.');
-      }
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  const handleDownloadQrisCard = async () => {
-    if (!canShareQrisImage) return;
-
-    const downloaded = await downloadQrisPaymentCard(getQrisCardPayload());
-
-    showShareFeedback(
-      downloaded ? 'success' : 'error',
-      downloaded
-        ? 'Gambar QRIS berhasil diunduh. Lampirkan gambar tersebut di WhatsApp/media sosial.'
-        : 'Gagal mengunduh gambar QRIS. Periksa koneksi lalu coba lagi.'
-    );
-  };
-
-  const handleCopyQrisDetails = async () => {
-    const copied = await copyTextToClipboard(getQrisShareText());
-    setShareCopied(copied);
-    if (!copied) showShareFeedback('error', 'Gagal menyalin rincian tagihan.');
-    setTimeout(() => setShareCopied(false), 2000);
-  };
-
   const shareFeedbackClass =
     shareFeedback?.tone === 'success'
       ? 'border-green-200 bg-green-50 text-green-700'
@@ -247,8 +112,11 @@ export default function TransactionPaymentModal({
       qris_paid_at: paymentMethod === 'qris' ? new Date().toISOString() : null,
     };
 
-    await onConfirmPayment(paymentData);
-    setIsProcessing(false);
+    try {
+      await onConfirmPayment(paymentData);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!isOpen) return null;

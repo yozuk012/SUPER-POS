@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from './auth/useAuth';
 import { supabase } from '@/lib/supabase';
 import {
   ACTIVE_STORE_EVENT,

@@ -11,7 +11,7 @@
 // (32 karakter untuk kertas 58 mm, 48 karakter untuk kertas 80 mm)
 // supaya tampilan preview = hasil cetak = hasil unduhan.
 
-import { formatRupiah } from './productUtils';
+import { formatRupiah } from './formatUtils';
 
 export const RECEIPT_PAPER_SIZES = {
   58: { value: 58, label: '58 mm', chars: 32, dots: 384 },

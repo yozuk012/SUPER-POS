@@ -9,7 +9,7 @@ import {
   FiFileText,
 } from 'react-icons/fi';
 
-// Label jenis data — harus sama dengan SCOPE_LABELS di hooks/useBackupsData.js
+// Label jenis data — harus sama dengan SCOPE_LABELS di hooks/backups/useBackupsData.js
 // agar nama file yang dipratinjau sesuai dengan nama file hasil ekspor.
 const SCOPE_FILE_LABELS = {
   sales_report: 'Laporan Penjualan',

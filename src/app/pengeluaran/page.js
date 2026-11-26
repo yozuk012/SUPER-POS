@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PageLayout from '@/components/PageLayout';
-import useHppOperasional from '@/hooks/useHppOperasional';
+import useHppOperasional from '@/hooks/operational/useHppOperasional';
 
 import ExpenseSummary from './components/ExpenseSummary';
 import ExpenseForm from './components/ExpenseForm';

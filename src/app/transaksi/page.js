@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FiBox, FiShoppingCart } from 'react-icons/fi';
 import PageLayout from '@/components/PageLayout';
-import useTransaction from '@/hooks/useTransaction';
+import useTransaction from '@/hooks/transactions/useTransaction';
 import TransactionFilters from './components/TransactionFilters';
 import TransactionProductGrid from './components/TransactionProductGrid';
 import TransactionOrderSummary from './components/TransactionOrderSummary';
@@ -50,6 +50,15 @@ export default function TransactionPage() {
           </div>
         </div>
       </div>
+
+      {transaction.checkoutError && (
+        <div role="alert" className="mb-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+          <p>{transaction.checkoutError}</p>
+          {!transaction.pendingCheckout && !transaction.storageBlocked && (
+            <button type="button" onClick={transaction.clearCheckoutError} className="mt-2 font-bold underline">Tutup Pesan</button>
+          )}
+        </div>
+      )}
 
       {transaction.pendingCheckout && (
         <div role="status" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">

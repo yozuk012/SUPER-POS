@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FiEye, FiSearch } from 'react-icons/fi';
-import { formatRupiah } from '@/lib/productUtils';
+import { formatRupiah } from '@/lib/formatUtils';
 import { calculateOfflinePrice, SEED_DEFAULT_ROUNDING_STEP } from '@/lib/seedCatalog';
 
 const PREVIEW_LIMIT = 12;

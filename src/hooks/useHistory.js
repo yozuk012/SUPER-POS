@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
-import { useAuth } from './useAuth';
+import { useAuth } from './auth/useAuth';
 
 export default function useHistory() {
   const { user } = useAuth();

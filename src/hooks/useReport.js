@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './auth/useAuth';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
 import { getCurrentMonthRange } from '@/lib/dateUtils';
 

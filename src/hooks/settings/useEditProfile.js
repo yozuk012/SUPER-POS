@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, uploadFile } from '@/lib/supabase';
-import { useAuth } from './useAuth';
-import { useConvert } from './useConvertImages'; // Pastikan path ini sesuai dengan project Anda
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useConvert } from '../useConvertImages'; // Pastikan path ini sesuai dengan project Anda
 import { validateSafeText, sanitizeText } from '@/lib/inputValidation';
 import { getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
 
@@ -33,7 +33,7 @@ const findValidationError = (fields) => {
 };
 
 export function useEditProfile() {
-  const { user } = useAuth();
+  const { user, refreshMerchant } = useAuth();
   const { convertToWebP } = useConvert();
 
   // ==========================================
@@ -316,6 +316,7 @@ export function useEditProfile() {
         .eq('id', storeForm.id);
 
       if (storeError) throw new Error('Gagal memperbarui data toko: ' + storeError.message);
+      await refreshMerchant();
 
       // 5. Sukses
       setSuccessMessage('Profil berhasil diperbarui!');

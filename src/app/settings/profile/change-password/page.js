@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { FiArrowLeft, FiUser, FiLock, FiEye, FiEyeOff, FiShield, FiAlertCircle, FiKey } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import useChangePassword from '@/hooks/useChangePassword';
+import { useAuth } from '@/hooks/auth/useAuth';
+import useChangePassword from '@/hooks/settings/useChangePassword';
 
 export default function ChangePasswordPage() {
   const router = useRouter();

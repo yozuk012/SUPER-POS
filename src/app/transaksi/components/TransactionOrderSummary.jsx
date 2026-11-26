@@ -1,7 +1,7 @@
 // src/app/transection/components/TransactionOrderSummary.jsx
 import { FiShoppingCart, FiX, FiCreditCard, FiLock, FiZap } from 'react-icons/fi';
 import TransactionQuickDiscount from './TransactionQuickDiscount';
-import { formatRupiah } from '@/lib/productUtils';
+import { formatRupiah } from '@/lib/formatUtils';
 
 export default function TransactionOrderSummary({
   cartItems,

@@ -7,7 +7,8 @@
 
 import { useState } from 'react';
 import { FiCheck, FiTag, FiTrash2, FiX, FiZap } from 'react-icons/fi';
-import { formatRupiah, parseNumberUI, resolveQuickDiscount } from '@/lib/productUtils';
+import { parseNumberUI, resolveQuickDiscount } from '@/lib/productUtils';
+import { formatRupiah } from '@/lib/formatUtils';
 
 const PRESET_DISCOUNTS = [1000, 2000, 5000, 10000];
 

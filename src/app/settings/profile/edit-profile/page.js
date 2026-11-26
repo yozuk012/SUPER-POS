@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft } from 'react-icons/fi';
-import { useEditProfile } from '@/hooks/useEditProfile';
+import { useEditProfile } from '@/hooks/settings/useEditProfile';
 
 // Import semua komponen yang sudah kita buat
 import StoreLogoSection from './components/StoreLogoSection';

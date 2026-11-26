@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { ACTIVE_STORE_EVENT, resolveActiveStore } from '@/lib/activeStore';
 import { MAX_TEXT_LENGTH, sanitizeText, validateSafeText } from '@/lib/inputValidation';
 

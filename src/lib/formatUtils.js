@@ -1,7 +1,11 @@
 /**
  * Utility functions untuk formatting tampilan data.
- * Untuk format Rupiah gunakan formatRupiah dari lib/productUtils.
  */
+
+export const formatRupiah = (number) => {
+  if (number === null || number === undefined || number === '') return 'Rp 0';
+  return `Rp ${Number(number).toLocaleString('id-ID')}`;
+};
 
 /**
  * Memformat tanggal menjadi format Indonesia (5 Okt 2026)

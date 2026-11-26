@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import PageLayout from '@/components/PageLayout';
 
 // 1. Import Hook (HANYA Bahan Baku, Operasional sudah dipisah)
-import useHppBahanBaku from '@/hooks/useHppBahanBaku';
+import useHppBahanBaku from '@/hooks/hpp/useHppBahanBaku';
 
 // 2. Import Komponen UI (Hanya 2 Step)
 import StepIndicator from './components/StepIndicator';

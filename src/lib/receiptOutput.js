@@ -320,16 +320,7 @@ export async function buildLogoRaster(logoUrl, options = {}) {
 // 4. HELPER UNDUHAN
 // ==========================================
 
-export function downloadBlob(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+export { downloadBlob } from './download';
 
 export function buildReceiptFileName(receiptData, extension) {
   const transactionId = String(receiptData?.transaction_id || 'STRUK').replace(/[^\w-]/g, '_');

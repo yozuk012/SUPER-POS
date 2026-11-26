@@ -27,7 +27,10 @@ export const resolveActiveStore = (stores, preferredId = null) => {
     const matched = stores.find((s) => String(s.id) === String(targetId) && s.is_active !== false);
     if (matched) return matched;
   }
-  return stores.find((s) => s.is_active !== false) || stores[0] || null;
+  return stores.find((s) => s.is_active !== false && isMainStore(s, stores))
+    || stores.find((s) => s.is_active !== false)
+    || stores[0]
+    || null;
 };
 
 // ==========================================

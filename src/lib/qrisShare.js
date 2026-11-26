@@ -9,7 +9,7 @@
 // Kartu inilah yang dibagikan lewat Web Share API (WhatsApp, Telegram,
 // Instagram, dll.) atau diunduh untuk dilampirkan manual.
 
-import { formatRupiah } from './productUtils';
+import { formatRupiah } from './formatUtils';
 
 // ── Konstanta desain kartu (px CSS, digambar dengan skala 2x agar tajam) ──
 const CARD_WIDTH = 720;

@@ -1,5 +1,33 @@
-// Simpan sebelum mengirim RPC: respons jaringan yang hilang belum berarti rollback.
-export const checkoutStorageKey = (userId, storeId) => `pending-checkout:${userId}:${storeId}`;
+import { calculateCartTotals } from './cart';
+
+export function createCheckout({ storeId, cartItems, customerName, channel, discount, storeInfo, paymentData }) {
+  const { subtotal, discountAmount, platformFee, grandTotal } = calculateCartTotals(cartItems, discount);
+  const amountPaid = Number(paymentData.amount_paid ?? grandTotal);
+  return {
+    requestId: crypto.randomUUID(),
+    cartItems: structuredClone(cartItems),
+    sale: {
+      store_id: storeId, channel, payment_method: paymentData.payment_method,
+      subtotal, discount: discountAmount, platform_fee: platformFee, grand_total: grandTotal,
+      notes: customerName ? `Customer: ${customerName}` : 'Umum',
+      qris_reference: paymentData.reference_number || null,
+      qris_status: paymentData.qris_status || null,
+      qris_paid_at: paymentData.qris_paid_at || null,
+    },
+    items: cartItems.map(item => ({
+      product_id: item.id, qty: item.qty, unit_price: item.unit_price,
+      hpp_snapshot: item.hpp, line_total: item.line_total,
+    })),
+    receipt: {
+      store: storeInfo, customer_name: customerName.trim() || '-',
+      items: cartItems.map(item => ({
+        name: item.name, qty: item.qty, unit_price: item.unit_price,
+        line_total: item.line_total, original_unit_price: item.base_unit_price ?? item.unit_price,
+      })),
+      amount_paid: amountPaid, change: Math.max(0, amountPaid - grandTotal),
+    },
+  };
+}
 
 export async function submitCheckout(client, checkout) {
   const { data, error } = await client.rpc('checkout_sale', {

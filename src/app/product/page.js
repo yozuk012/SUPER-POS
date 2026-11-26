@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
-import useProducts from "@/hooks/useProducts";
+import useProducts from '@/hooks/products/useProducts';
 import useCopyAvailability from "@/hooks/useCopyAvailability";
 import CopyDataModal from "@/components/CopyDataModal";
 

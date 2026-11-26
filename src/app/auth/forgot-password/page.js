@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FiArrowLeft, FiLock, FiShield, FiKey, FiAlertCircle, FiEye, FiEyeOff, FiMessageCircle } from 'react-icons/fi';
-import useForgotPassword from '@/hooks/useForgotPassword';
+import useForgotPassword from '@/hooks/auth/useForgotPassword';
 import { useState } from 'react';
 
 export default function ForgotPasswordPage() {

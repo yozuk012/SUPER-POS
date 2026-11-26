@@ -2,14 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getOnlinePrice } from '@/lib/productUtils';
 
-// Helper hitung harga online (disamakan dengan productUtils.js)
-const calculateOnlinePrice = (basePrice, markupPct) => {
-  const base = Number(basePrice) || 0;
-  const markup = Number(markupPct) || 0;
-  const calculatedPrice = base * (1 + markup / 100);
-  return Math.ceil(calculatedPrice / 1000) * 1000;
-};
 
 export function useGlobalOnlineMarkup() {
   // ==========================================
@@ -65,7 +59,7 @@ export function useGlobalOnlineMarkup() {
         const basePrice = product.base_price || product.hpp || 0;
         const currentOnlinePrice = onlinePriceData 
           ? onlinePriceData.price 
-          : calculateOnlinePrice(basePrice, markupPct);
+          : getOnlinePrice(basePrice, markupPct);
         
         return {
           ...product,
@@ -155,7 +149,7 @@ export function useGlobalOnlineMarkup() {
     const preview = filteredProducts.map(product => {
       // Gunakan base_price, jika 0 gunakan hpp sebagai fallback
       const basePrice = product.base_price || product.hpp || 0;
-      const newOnlinePrice = calculateOnlinePrice(basePrice, pct);
+      const newOnlinePrice = getOnlinePrice(basePrice, pct);
       const priceDifference = newOnlinePrice - product.current_online_price;
       const priceChangePct = product.current_online_price > 0 
         ? ((newOnlinePrice - product.current_online_price) / product.current_online_price * 100)
@@ -238,7 +232,7 @@ export function useGlobalOnlineMarkup() {
         const product = productsToUpdate[i];
         // Gunakan base_price, jika 0 gunakan hpp sebagai fallback
         const basePrice = product.base_price || product.hpp || 0;
-        const newOnlinePrice = calculateOnlinePrice(basePrice, pct);
+        const newOnlinePrice = getOnlinePrice(basePrice, pct);
 
         // 1. Update online_markup_pct di tabel products
         const { error: productError } = await supabase

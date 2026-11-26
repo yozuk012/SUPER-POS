@@ -18,8 +18,8 @@ import {
   MdStorefront,
 } from "react-icons/md";
 import { FiLogOut, FiX, FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { useAuth } from "@/hooks/useAuth";
-import { useActiveStoreName } from "@/hooks/useActiveStoreName";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useActiveStoreName } from '@/hooks/stores/useActiveStoreName';
 
 /**
  * Urutan menu (grouped by function):

@@ -12,6 +12,10 @@ super-pos
 ├── scripts
 │   ├── blackbox
 │   │   └── selenium-blackbox.js
+│   ├── tests
+│   │   ├── browser-smoke.cjs
+│   │   ├── loadSource.mjs
+│   │   └── soc.test.mjs
 │   └── audit-script.js
 ├── src
 │   ├── app
@@ -31,7 +35,6 @@ super-pos
 │   │   │   │   ├── layout.js
 │   │   │   │   └── page.js
 │   │   │   └── register
-│   │   │       ├── components
 │   │   │       ├── layout.js
 │   │   │       └── page.js
 │   │   ├── bahan-baku
@@ -159,6 +162,7 @@ super-pos
 │   │   ├── DATABASE.MD
 │   │   ├── PANDUAN.txt
 │   │   ├── PROBLEM.MD
+│   │   ├── product-prices-rls.sql
 │   │   ├── RELATION.md
 │   │   └── TEMPLATE SHEETS.txt
 │   ├── components
@@ -168,39 +172,65 @@ super-pos
 │   │   ├── Sidebar.jsx
 │   │   └── StructuredData.jsx
 │   ├── hooks
-│   │   ├── useActiveStoreName.js
-│   │   ├── useAddStore.js
-│   │   ├── useAuth.js
-│   │   ├── useBackupsData.js
+│   │   ├── auth
+│   │   │   ├── useAuth.js
+│   │   │   ├── useForgotPassword.js
+│   │   │   ├── useLoginForm.js
+│   │   │   └── useRegisterForm.js
+│   │   ├── backups
+│   │   │   └── useBackupsData.js
+│   │   ├── hpp
+│   │   │   ├── useHppBahanBaku.js
+│   │   │   ├── useHppProduk.js
+│   │   │   └── useHppReferenceData.js
+│   │   ├── operational
+│   │   │   └── useHppOperasional.js
+│   │   ├── products
+│   │   │   ├── useProductData.js
+│   │   │   ├── useProductFilter.js
+│   │   │   ├── useProductForm.js
+│   │   │   └── useProducts.js
+│   │   ├── settings
+│   │   │   ├── useChangePassword.js
+│   │   │   ├── useEditProfile.js
+│   │   │   ├── useGlobalOnlineMarkup.js
+│   │   │   └── useProfile.js
+│   │   ├── stores
+│   │   │   ├── useActiveStoreName.js
+│   │   │   ├── useAddStore.js
+│   │   │   ├── useOwnerStores.js
+│   │   │   └── useResolvedActiveStore.js
+│   │   ├── transactions
+│   │   │   ├── useBluetoothPrinter.js
+│   │   │   ├── useCheckout.js
+│   │   │   ├── useQrisSharing.js
+│   │   │   ├── useTransaction.js
+│   │   │   └── useTransactionCatalog.js
 │   │   ├── useBahanBaku.js
-│   │   ├── useBluetoothPrinter.js
 │   │   ├── useCategories.js
-│   │   ├── useChangePassword.js
 │   │   ├── useConvertImages.js
 │   │   ├── useCopyAvailability.js
 │   │   ├── useDashboard.js
-│   │   ├── useEditProfile.js
-│   │   ├── useForgotPassword.js
-│   │   ├── useGlobalOnlineMarkup.js
 │   │   ├── useHistory.js
-│   │   ├── useHppBahanBaku.js
-│   │   ├── useHppOperasional.js
-│   │   ├── useHppProduk.js
-│   │   ├── useOnlinePercentage.js
-│   │   ├── useProducts.js
-│   │   ├── useProfile.js
 │   │   ├── useReport.js
-│   │   ├── useSeedData.js
-│   │   └── useTransaction.js
+│   │   └── useSeedData.js
 │   ├── lib
 │   │   ├── activeStore.js
+│   │   ├── authValidation.js
+│   │   ├── backupImport.js
+│   │   ├── backupWorkbook.js
+│   │   ├── cart.js
 │   │   ├── checkout.js
 │   │   ├── copyStoreData.js
 │   │   ├── dateUtils.js
+│   │   ├── download.js
 │   │   ├── formatUtils.js
+│   │   ├── hppCalculations.js
 │   │   ├── inputValidation.js
 │   │   ├── onboarding.js
+│   │   ├── pendingCheckout.js
 │   │   ├── productUtils.js
+│   │   ├── productValidation.js
 │   │   ├── qrisShare.js
 │   │   ├── rawMaterialUtils.js
 │   │   ├── receiptLayout.js
@@ -208,6 +238,16 @@ super-pos
 │   │   ├── seedCatalog.js
 │   │   ├── site.js
 │   │   └── supabase.js
+│   ├── providers
+│   │   └── AuthProvider.jsx
+│   ├── repositories
+│   │   ├── backups.js
+│   │   ├── categories.js
+│   │   ├── inventory.js
+│   │   ├── products.js
+│   │   ├── rawMaterials.js
+│   │   ├── recipes.js
+│   │   └── stores.js
 │   ├── seeds
 │   │   ├── images
 │   │   │   ├── air_mineral.jpg
@@ -328,6 +368,14 @@ super-pos
 │   │   │   ├── tetelan_ikan_dori_frozen.jpg
 │   │   │   └── usus_ayam_bersih_frozen.jpg
 │   │   └── data.json
+│   ├── services
+│   │   ├── auth
+│   │   │   ├── login.js
+│   │   │   ├── registration.js
+│   │   │   └── session.js
+│   │   ├── backups.js
+│   │   ├── hppBahanBaku.js
+│   │   └── products.js
 │   └── proxy.js
 ├── .env.local
 ├── .env.production

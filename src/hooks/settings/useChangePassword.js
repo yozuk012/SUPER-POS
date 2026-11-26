@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useRouter } from 'next/navigation';
 
 export function useChangePassword() {

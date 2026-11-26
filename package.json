@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "audit": "node scripts/audit-script.js",
+    "test": "node --test scripts/tests/*.test.mjs",
     "test:blackbox": "node scripts/blackbox/selenium-blackbox.js"
   },
   "dependencies": {

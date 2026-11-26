@@ -320,10 +320,46 @@ my-pos/
 Pola arsitektur:
 
 1. **Halaman** (`src/app/**/page.js`) bertugas merender UI dan memanggil hook.
-2. **Custom hooks** (`src/hooks/*.js`) menangani state, validasi, dan query Supabase.
-3. **Library** (`src/lib/*.js`) menyediakan utilitas lintas fitur.
-4. **Supabase JS client** dipanggil langsung dari browser — tidak ada lapisan API
-   backend khusus, kecuali route penyaji gambar seed.
+2. **Custom hooks** (`src/hooks/*.js`) mengelola state dan lifecycle React.
+   `AuthProvider` menyediakan satu sesi bersama melalui `useAuth`; formulir login
+   dan registrasi memiliki hook terpisah. Katalog kasir dan checkout juga terpisah.
+3. **Library** (`src/lib/*.js`) menyimpan fungsi tanpa state React, seperti
+   perhitungan keranjang, validasi, pemetaan impor, dan pembentukan workbook Excel.
+4. **Services** (`src/services/*.js`) menjalankan proses fitur: registrasi,
+   penyimpanan produk, ekspor/impor, dan pengelolaan sesi.
+5. **Repositories** (`src/repositories/*.js`) memusatkan query toko dan backup.
+   Modul lama yang belum dipindahkan masih boleh mengakses Supabase melalui hook;
+   hindari menambahkan query langsung pada komponen presentasi.
+6. **Supabase JS client** tetap dipakai di browser dengan RLS. Checkout memanggil
+   RPC PostgreSQL untuk transaksi atomik; reset password/PIN memakai API server.
+
+Contoh alur SoC:
+
+```text
+Halaman Backup → useBackupsData → services/backups → repositories/backups
+                                             └→ lib/backupWorkbook + lib/backupImport
+Halaman Kasir → useTransaction → useTransactionCatalog
+                            └→ useCheckout → lib/checkout → RPC checkout_sale
+AuthProvider → services/auth/session → Supabase Auth + merchant
+```
+
+Modul auth dikelompokkan agar mudah ditelusuri:
+
+```text
+src/providers/AuthProvider.jsx       # Menyediakan sesi bersama
+src/hooks/auth/useAuth.js            # Membaca sesi dari context
+src/hooks/auth/useLoginForm.js       # State dan interaksi formulir login
+src/hooks/auth/useRegisterForm.js    # State registrasi dan tahapan PIN
+src/services/auth/session.js         # Pengamatan sesi dan logout
+src/services/auth/login.js           # Pemanggilan login Supabase
+src/services/auth/registration.js    # Penyimpanan pendaftaran akun/toko
+```
+
+Provider menyediakan data ke hook melalui context. Provider tidak memanggil hook
+formulir; halaman login/register yang memanggil hook formulir masing-masing.
+
+Logout tidak menghapus seluruh `localStorage`: checkout tertunda tetap tersimpan
+per akun/toko dan dapat dilanjutkan oleh pemilik yang sama setelah login kembali.
 
 ---
 
@@ -451,6 +487,8 @@ NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
 4. Aktifkan **Row Level Security (RLS)** pada seluruh tabel dan buat policy yang
    membatasi data berdasarkan `auth.uid()` / `user_id` toko. Ini sangat penting
    karena aplikasi mengakses Supabase langsung dari browser menggunakan anon key.
+  Untuk policy harga produk, jalankan `src/blueprint/product-prices-rls.sql`
+  melalui Supabase SQL Editor.
 5. Atur **Auth URL Configuration** (Site URL dan Redirect URLs) ke domain aplikasi,
    misalnya `http://localhost:3000` untuk development.
 6. Jika mode konfirmasi email aktif, konfirmasi email pengguna sebelum login.
@@ -526,8 +564,14 @@ Untuk memverifikasi koneksi database, buka
 | `npm run build` | Membuat build production |
 | `npm start` | Menjalankan hasil build production |
 | `npm run lint` | Menjalankan ESLint |
+| `npm test` | Menguji sesi, checkout, kalkulasi, workbook, impor, dan batas UI/data |
 
-> Belum tersedia script pengujian otomatis (`npm test`).
+Pengujian memakai `node:test` bawaan Node.js, tanpa dependency test tambahan.
+
+Smoke test browser memakai Selenium/Edge dengan respons Supabase tiruan, sehingga
+tidak menulis ke database. Jalankan `npm run build`, lalu `npm start -- -p 3107`
+dan `node scripts/tests/browser-smoke.cjs` dari terminal lain. URL server dapat
+diubah melalui `SOC_TEST_URL`.
 
 ---
 
@@ -673,8 +717,8 @@ namun masih dinonaktifkan (bertanda “Segera Hadir”).
   `NEXT_PUBLIC_ENABLE_SEED_DATA=true`.
 - **Gambar remote** dibatasi oleh `remotePatterns` di `next.config.mjs`. Ganti
   hostname jika memakai project Supabase lain.
-- **Belum ada automated test.** Kualitas saat ini dijaga melalui ESLint dan
-  pengujian manual.
+- **Pengujian otomatis tersedia melalui `npm test`.** Pengujian database langsung,
+  printer Bluetooth, dan interaksi browser tetap memerlukan environment terkait.
 - **Service worker hanya aktif di production.** Saat `npm run dev`, registrasi
   dilewati dan cache `superpos-*` dibersihkan agar tidak menyajikan aset basi.
 

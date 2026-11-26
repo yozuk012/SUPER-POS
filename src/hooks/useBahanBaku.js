@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './auth/useAuth';
 import { convertPurchaseToBase, deleteRawMaterial, getUnitDefinition, validateRawMaterialName, parseNumberWithComma } from '@/lib/rawMaterialUtils';
 import { ACTIVE_STORE_EVENT, getActiveStoreId, resolveActiveStore } from '@/lib/activeStore';
 

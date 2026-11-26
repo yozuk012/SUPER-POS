@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   FiDownload,
   FiUpload,
@@ -15,53 +15,18 @@ import ImportPanel from './components/ImportPanel';
 import BackupHistoryTable from './components/BackupHistoryTable';
 
 // Import Hooks & Libs 
-import { useBackupsData } from '@/hooks/useBackupsData';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
-import { useActiveStore, resolveActiveStore, setActiveStoreId } from '@/lib/activeStore';
+import { useBackupsData } from '@/hooks/backups/useBackupsData';
+import { useAuth } from '@/hooks/auth/useAuth';
+
+import { useResolvedActiveStore } from '@/hooks/stores/useResolvedActiveStore';
 
 export default function ExportDataPage() {
   const [activeTab, setActiveTab] = useState('export');
   
   // 1. Ambil data user dan store aktif
   const { user } = useAuth();
-  const { storeId: persistedStoreId } = useActiveStore();
-  
   const userId = user?.id;
-
-  // Fallback: jika belum ada toko aktif yang tersimpan di localStorage
-  // (mis. user baru login dan belum pernah switch toko), pilih toko aktif
-  // pertama dari database — sama seperti pola hook lain di aplikasi ini.
-  useEffect(() => {
-    if (!userId || persistedStoreId) return;
-
-    let isCancelled = false;
-
-    const resolveStore = async () => {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('id, is_active')
-        .eq('user_id', userId)
-        .order('id', { ascending: true });
-
-      if (isCancelled || error) return;
-
-      const activeStore = resolveActiveStore(data);
-      // Simpan ke active store global (localStorage + event) agar seluruh
-      // aplikasi memakai toko yang sama. useActiveStore() akan ikut re-render.
-      if (activeStore) setActiveStoreId(activeStore.id);
-    };
-
-    resolveStore();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [userId, persistedStoreId]);
-
-  // storeId yang dipakai: toko aktif dari useActiveStore() (pilihan user
-  // atau hasil fallback di atas)
-  const storeId = persistedStoreId;
+  const { storeId } = useResolvedActiveStore(userId);
 
   // 2. Panggil custom hook useBackupsData
   const {

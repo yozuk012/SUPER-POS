@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAuth } from '@/hooks/useAuth';
+import { useRegisterForm } from '@/hooks/auth/useRegisterForm';
 
 // Brand component - extracted outside to prevent recreation on render
 const Brand = () => (
@@ -29,7 +29,7 @@ const ErrorIcon = () => (
 );
 
 export default function RegisterPage() {
-  const { registerForm } = useAuth();
+  const registerForm = useRegisterForm();
 
   const {
     step,

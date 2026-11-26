@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- logo toko dinamis dari Supabase Storage */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FiLoader } from 'react-icons/fi';
 import {
   MdChevronLeft,
@@ -19,67 +19,13 @@ import {
   MdSync,
 } from 'react-icons/md';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useActiveStore } from '@/lib/activeStore';
+import { useProfile } from '@/hooks/settings/useProfile';
 import PageLayout from '../../../components/PageLayout';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { storeId } = useActiveStore();
-
-  const [businessName, setBusinessName] = useState('Memuat...');
-  const [userName, setUserName] = useState('Memuat...');
-  const [logoUrl, setLogoUrl] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const { data: { fullName: userName, storeName: businessName, logoUrl }, loading: isLoading } = useProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push('/auth/login');
-          return;
-        }
-
-        const [{ data: merchant, error: merchantError }, { data: store, error: storeError }] = await Promise.all([
-          supabase
-            .from('merchants')
-            .select('full_name, store_name, store_logo_url')
-            .eq('id', user.id)
-            .maybeSingle(),
-          storeId
-            ? supabase
-                .from('stores')
-                .select('name, logo_url')
-                .eq('id', storeId)
-                .eq('user_id', user.id)
-                .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
-        ]);
-
-        if (merchantError) throw merchantError;
-        if (storeError) throw storeError;
-
-        if (merchant) {
-          setUserName(merchant.full_name || 'Pengguna');
-          setBusinessName(store?.name || merchant.store_name || 'Nama Toko');
-          setLogoUrl(store?.logo_url || merchant.store_logo_url || null);
-        } else {
-          setUserName(user.user_metadata?.full_name || user.email || 'Pengguna');
-          setBusinessName(user.user_metadata?.store_name || 'Nama Toko');
-          setLogoUrl(null);
-        }
-      } catch (err) {
-        console.error('Gagal memuat profil:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchProfile();
-  }, [router, storeId]);
 
   const menuItems = [
     { label: 'Edit Profile', icon: MdOutlineEdit, href: '/settings/profile/edit-profile' },

@@ -4,47 +4,19 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { FiMenu } from "react-icons/fi";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { useRouter } from "next/navigation";
 
 export default function PageLayout({ children, title = "Dashboard" }) {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    let isMounted = true;
+    if (!loading && !user) router.replace('/auth/login');
+  }, [loading, user, router]);
 
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          router.replace("/auth/login");
-          return;
-        }
-
-        if (isMounted) setIsAuthChecking(false);
-      } catch {
-        router.replace("/auth/login");
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session?.access_token) {
-        router.replace("/auth/login");
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [router]);
-
-  if (isAuthChecking) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />

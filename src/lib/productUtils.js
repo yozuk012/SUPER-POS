@@ -1,9 +1,3 @@
-// Format angka ke Rupiah: 43000 → "Rp 43.000"
-export const formatRupiah = (number) => {
-  if (number === null || number === undefined || number === "") return "Rp 0";
-  return "Rp " + Number(number).toLocaleString("id-ID");
-};
-
 // Parse "Rp 43.000" → 43000
 export const parseNumberUI = (val) => {
   if (!val) return 0;

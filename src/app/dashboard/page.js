@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/PageLayout";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useActiveStore } from "@/lib/activeStore";
-import { useActiveStoreName } from "@/hooks/useActiveStoreName";
+import { useActiveStoreName } from '@/hooks/stores/useActiveStoreName';
 import { getDefaultDateRange } from "@/lib/dateUtils";
 import { formatFullDate } from "@/lib/formatUtils";
 import { FiCalendar, FiAlertCircle } from "react-icons/fi";

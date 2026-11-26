@@ -32,7 +32,7 @@ import {
   downloadBlob,
   renderReceiptPngBlob,
 } from '@/lib/receiptOutput';
-import useBluetoothPrinter from '@/hooks/useBluetoothPrinter';
+import useBluetoothPrinter from '@/hooks/transactions/useBluetoothPrinter';
 
 const RECEIPT_FONT_FAMILY = "'Courier New', Courier, monospace";
 const MM_PER_PX = 25.4 / 96;

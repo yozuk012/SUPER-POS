@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import PageLayout from '@/components/PageLayout';
-import useHppProduk from '@/hooks/useHppProduk';
+import useHppProduk from '@/hooks/hpp/useHppProduk';
 
 import HPPHeader from './components/HPPHeader';
 import HPPProductList from './components/HPPProductList';
