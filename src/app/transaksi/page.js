@@ -5,6 +5,7 @@ import { FiBox, FiShoppingCart } from 'react-icons/fi';
 import PageLayout from '@/components/PageLayout';
 import useTransaction from '@/hooks/transactions/useTransaction';
 import TransactionFilters from './components/TransactionFilters';
+import TransactionPagination from './components/TransactionPagination';
 import TransactionProductGrid from './components/TransactionProductGrid';
 import TransactionOrderSummary from './components/TransactionOrderSummary';
 import TransactionPaymentModal from './components/TransactionPaymentModal';
@@ -17,27 +18,17 @@ export default function TransactionPage() {
   const totalCartItems = transaction.cartItems.reduce((sum, item) => sum + item.qty, 0);
 
   return (
-    <PageLayout title="Transaksi Kasir">
+    <PageLayout title="Transaksi Kasir" contentClassName="min-w-0 flex-1 p-2 sm:p-3 xl:p-6">
+      <div className="flex min-w-0 flex-col xl:h-[calc(100dvh-3rem)] xl:min-h-[40rem]">
 
       {/* ═══ HEADER HERO — gradient biru solid ═══ */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400 p-4 sm:p-5 mb-3 shadow-lg shadow-blue-500/30">
+      <div className="relative mb-3 hidden shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400 px-4 py-3 shadow-lg shadow-blue-500/30 md:block">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
         <div className="absolute -bottom-16 -left-12 w-40 h-40 bg-white/5 rounded-full pointer-events-none" />
 
         <div className="relative flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <span className="text-xs font-bold text-white/90 uppercase tracking-wider">
-                SuperPOS
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Transaksi Kasir</h1>
+            <h1 className="text-xl font-bold text-white">Transaksi Kasir</h1>
             <p className="text-blue-50 text-xs mt-0.5">
               Pilih produk dan proses pembayaran pelanggan.
             </p>
@@ -52,7 +43,7 @@ export default function TransactionPage() {
       </div>
 
       {transaction.checkoutError && (
-        <div role="alert" className="mb-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+        <div role="alert" className="mb-3 shrink-0 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
           <p>{transaction.checkoutError}</p>
           {!transaction.pendingCheckout && !transaction.storageBlocked && (
             <button type="button" onClick={transaction.clearCheckoutError} className="mt-2 font-bold underline">Tutup Pesan</button>
@@ -61,7 +52,7 @@ export default function TransactionPage() {
       )}
 
       {transaction.pendingCheckout && (
-        <div role="status" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <div role="status" className="mb-3 shrink-0 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <p>Ada transaksi yang belum mendapat konfirmasi. Periksa dan lanjutkan transaksi ini sebelum membuat pembayaran baru. Jangan meminta pelanggan membayar lagi.</p>
           <button
             type="button"
@@ -75,8 +66,10 @@ export default function TransactionPage() {
       )}
 
       {/* ═══ TOGGLE MOBILE ═══ */}
-      <div className="md:hidden flex gap-2 mb-3">
+      <div className="mb-2 flex shrink-0 gap-2 xl:hidden">
         <button
+          type="button"
+          aria-pressed={!showCart}
           onClick={() => setShowCart(false)}
           className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
             !showCart
@@ -88,6 +81,8 @@ export default function TransactionPage() {
           <span>Produk</span>
         </button>
         <button
+          type="button"
+          aria-pressed={showCart}
           onClick={() => setShowCart(true)}
           className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 relative ${
             showCart
@@ -106,12 +101,12 @@ export default function TransactionPage() {
       </div>
 
       {/* ═══ MAIN POS CONTAINER ═══ */}
-      <div className="relative overflow-hidden flex flex-col md:flex-row h-[calc(100vh-10rem)] md:h-[calc(100vh-12rem)] bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-blue-200 bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-sm xl:flex-row xl:overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 z-10" />
 
         {/* ═══ KIRI — Katalog ═══ */}
-        <div className={`${showCart ? 'hidden' : 'flex'} md:flex flex-1 flex-col overflow-hidden pt-1`}>
-          <div className="shrink-0 border-b border-blue-200 bg-gradient-to-r from-white to-blue-50">
+        <div className={`${showCart ? 'hidden' : 'flex'} min-h-0 min-w-0 flex-1 flex-col pt-1 xl:flex`}>
+          <div className="@container shrink-0 rounded-t-xl border-b border-blue-200 bg-gradient-to-r from-white to-blue-50">
             <TransactionFilters
               search={transaction.search}
               setSearch={transaction.setSearch}
@@ -120,12 +115,11 @@ export default function TransactionPage() {
               categories={transaction.categories}
               categoryId={transaction.categoryId}
               setCategoryId={transaction.setCategoryId}
-              pagination={transaction.pagination}
               setPage={transaction.setPage}
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-blue-50/40">
+          <div className="min-h-0 flex-1 bg-gradient-to-b from-white to-blue-50/40 xl:overflow-y-auto">
             <TransactionProductGrid
               products={transaction.products}
               onAddToCart={transaction.addToCart}
@@ -133,10 +127,15 @@ export default function TransactionPage() {
               channel={transaction.channel}
             />
           </div>
+          <TransactionPagination
+            pagination={transaction.pagination}
+            pageSize={transaction.limit}
+            setPage={transaction.setPage}
+          />
         </div>
 
         {/* ═══ KANAN — Keranjang ═══ */}
-        <div className={`${!showCart ? 'hidden' : 'flex'} md:flex w-full md:w-[400px] bg-white border-t md:border-t-0 md:border-l border-blue-200 flex-col h-full shrink-0 pt-1`}>
+        <div className={`${!showCart ? 'hidden' : 'flex'} min-h-[calc(100dvh-9rem)] min-w-0 w-full shrink-0 flex-col rounded-xl bg-white pt-1 xl:flex xl:min-h-0 xl:w-80 xl:rounded-l-none xl:border-l xl:border-blue-200 2xl:w-90`}>
           <TransactionOrderSummary
             cartItems={transaction.cartItems}
             updateQty={transaction.updateQty}
@@ -153,6 +152,7 @@ export default function TransactionPage() {
             storeName={transaction.storeName}
           />
         </div>
+      </div>
       </div>
 
       <TransactionPaymentModal

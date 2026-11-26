@@ -20,11 +20,11 @@ export default function TransactionOrderSummary({
 }) {
 
   return (
-    <div className="w-full md:w-[400px] flex flex-col h-full">
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col xl:overflow-y-auto">
 
       {/* ═══ Header Keranjang ═══ */}
       <div className="p-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 shrink-0">
-        <div className="flex justify-between items-center mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <FiShoppingCart className="w-5 h-5 text-blue-600" /> Keranjang
             <span className="text-xs font-bold text-blue-700 bg-white border border-blue-200 px-2 py-0.5 rounded-full">
@@ -68,7 +68,7 @@ export default function TransactionOrderSummary({
       </div>
 
       {/* ═══ List Item ═══ */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-white to-blue-50/30">
+      <div className="min-h-40 flex-1 space-y-3 bg-gradient-to-b from-white to-blue-50/30 p-3 xl:overflow-y-auto sm:p-4">
         {cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 p-4 text-center">
             <div className="bg-blue-100 p-4 rounded-full mb-3">
@@ -82,7 +82,7 @@ export default function TransactionOrderSummary({
             return (
             <div key={item.id} className="bg-white p-3 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors shadow-sm">
               <div className="flex justify-between items-start mb-2">
-                <div className="flex-1 pr-2">
+                <div className="min-w-0 flex-1 break-words pr-2">
                   <h4 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight">
                     {item.name}
                   </h4>
@@ -110,7 +110,7 @@ export default function TransactionOrderSummary({
                 </button>
               </div>
 
-              <div className="flex justify-between items-center mt-2">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center border border-blue-200 rounded-md bg-white overflow-hidden">
                   <button
                     onClick={() => updateQty(item.id, item.qty - 1)}
@@ -174,7 +174,7 @@ export default function TransactionOrderSummary({
           />
         )}
 
-        <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+        <div className="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-blue-200">
           <span className="text-base font-bold text-slate-800">Total Harga</span>
           <span className="text-2xl font-extrabold text-blue-600">{formatRupiah(grandTotal)}</span>
         </div>

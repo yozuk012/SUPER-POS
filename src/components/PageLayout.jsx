@@ -7,7 +7,7 @@ import { FiMenu } from "react-icons/fi";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useRouter } from "next/navigation";
 
-export default function PageLayout({ children, title = "Dashboard" }) {
+export default function PageLayout({ children, title = "Dashboard", contentClassName = "flex-1 p-4 md:p-6" }) {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, loading } = useAuth();
@@ -30,7 +30,7 @@ export default function PageLayout({ children, title = "Dashboard" }) {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* 2. Area Konten Utama */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-64 transition-all duration-300">
+      <div className="min-w-0 flex-1 flex flex-col min-h-screen transition-all duration-300">
         
         {/* Header Mobile (Hanya muncul di layar kecil) */}
         <header className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
@@ -49,7 +49,7 @@ export default function PageLayout({ children, title = "Dashboard" }) {
         </header>
 
         {/* Konten Halaman */}
-        <main className="flex-1 p-4 md:p-6">
+        <main className={contentClassName}>
           {children}
         </main>
       </div>

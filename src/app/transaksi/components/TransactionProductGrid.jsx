@@ -47,7 +47,7 @@ export default function TransactionProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+    <div className="grid grid-cols-2 items-start gap-2 p-2 sm:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] sm:gap-3 sm:p-3">
       {products.map((product) => {
         const prices = Array.isArray(product.product_prices) ? product.product_prices : [];
         let displayPrice = Number(product.base_price) || 0;
@@ -91,7 +91,7 @@ export default function TransactionProductGrid({
             key={product.id}
             onClick={() => !isOutOfStock && onAddToCart(product)}
             className={`
-              bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col group transition-all duration-200
+              min-w-0 h-full bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col group transition-all duration-200
               ${isOutOfStock
                 ? 'opacity-60 grayscale border-slate-200 cursor-not-allowed'
                 : 'border-blue-100 hover:shadow-lg hover:border-blue-400 cursor-pointer active:scale-[0.98]'
@@ -110,7 +110,7 @@ export default function TransactionProductGrid({
                   alt={product.name}
                   fill
                   className={`object-cover transition-transform duration-200 ${!isOutOfStock && 'group-hover:scale-105'}`}
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  sizes="(max-width: 639px) 50vw, 240px"
                   onError={(event) => {
                     event.currentTarget.style.visibility = 'hidden';
                   }}
@@ -136,11 +136,11 @@ export default function TransactionProductGrid({
               </div>
             </div>
 
-            <div className="p-3 flex-1 flex flex-col">
-              <h3 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-1 min-h-[2.5rem]">
+            <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3">
+              <h3 className="mb-1 min-h-[2.5rem] break-words text-sm font-bold leading-tight text-slate-800 line-clamp-2">
                 {product.name}
               </h3>
-              <p className="text-xs text-slate-500 mb-2">
+              <p className="mb-2 break-words text-xs text-slate-500">
                 {product.sku} • {product.unit}
               </p>
 
@@ -153,11 +153,11 @@ export default function TransactionProductGrid({
                   </p>
                 )}
 
-                <p className={`text-lg font-bold ${hasDiscount ? 'text-red-600' : (isOnlineMode ? 'text-purple-700' : 'text-blue-600')}`}>
+                <p className={`break-words text-base font-bold sm:text-lg ${hasDiscount ? 'text-red-600' : (isOnlineMode ? 'text-purple-700' : 'text-blue-600')}`}>
                   {formatRupiah(finalPrice)}
                 </p>
 
-                <div className={`text-xs font-semibold px-2 py-1.5 rounded-md flex items-center gap-1.5 w-fit ${
+                <div className={`max-w-full text-xs font-semibold px-2 py-1.5 rounded-md flex flex-wrap items-center gap-1.5 w-fit ${
                   stockUnlimited
                     ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                     : isOutOfStock

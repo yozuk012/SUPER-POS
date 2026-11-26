@@ -139,6 +139,7 @@ super-pos
 │   │   │   │   ├── ReceiptModal.jsx
 │   │   │   │   ├── TransactionFilters.jsx
 │   │   │   │   ├── TransactionOrderSummary.jsx
+│   │   │   │   ├── TransactionPagination.jsx
 │   │   │   │   ├── TransactionPaymentModal.jsx
 │   │   │   │   ├── TransactionProductGrid.jsx
 │   │   │   │   └── TransactionQuickDiscount.jsx
@@ -377,6 +378,7 @@ super-pos
 │   │   ├── hppBahanBaku.js
 │   │   └── products.js
 │   └── proxy.js
+├── .clinerules
 ├── .env.local
 ├── .env.production
 ├── .gitignore
